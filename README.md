@@ -1,6 +1,6 @@
 # TypeMate - AI-Powered Text Capture & Rewriting Tool
 
-🚀 **Instant text capture and AI-enhanced rewriting** - Select any text, press Ctrl+Alt+R, and transform your writing with this lightweight Windows tray application. Perfect for writers, developers, and productivity enthusiasts.
+🚀 **Instant text capture and AI-powered rewriting** - Select any text, press Ctrl+Alt+R, and transform your writing with this lightweight Windows tray application. Perfect for writers, developers, and productivity enthusiasts.
 
 ## Features
 
@@ -8,12 +8,13 @@
 - **Global Hotkey**: Press `Ctrl + Alt + R` from any application to capture selected text
 - **Text Capture**: Automatically copies selected text using simulated `Ctrl+C`
 - **Popup Editor**: Shows a popup window where you can edit the captured text
-- **Text Rewriting**: Click "Rewrite" to prepend "[Rewritten] " to the text (MVP implementation)
+- **AI Text Rewriting**: Uses OpenAI to rewrite captured text with a selection of styles (EasyRead, Witty, Formal, Summarise, Expand, LinkedInPost). Requires an OpenAI API key configured in the app.
 - **Text Insertion**: Click "Insert" to paste the modified text back to the original application
 
 ## How to Use
 
-1. **Build and Run**: 
+1. **Build and Run**:
+
    ```bash
    dotnet build
    dotnet run
@@ -50,6 +51,7 @@
 ## Reliability Features
 
 **Long-Term Background Operation:**
+
 - Comprehensive exception handling prevents crashes
 - Automatic resource cleanup and memory management
 - Thread-safe clipboard operations with retry logic
@@ -58,12 +60,14 @@
 - Built-in logging for troubleshooting (logs stored in `%LocalAppData%\TypeMate\`)
 
 **Error Recovery:**
+
 - Hotkey re-registration if lost during system events
 - Tray icon restoration after Windows session changes
 - Clipboard operation retries with fallback handling
 - Background task exception handling without UI crashes
 
 **Monitoring & Debugging:**
+
 - Automatic log rotation to prevent disk space issues
 - Detailed logging of all operations and errors
 - Performance-optimized clipboard access patterns
@@ -71,7 +75,6 @@
 
 ## Limitations (MVP)
 
-- No AI integration (text rewriting is simple prepending)
 - Fixed hotkey (Ctrl+Alt+R) - no customization UI
 - Plain text only - no rich text formatting
 - Windows only - no cross-platform support
@@ -84,10 +87,6 @@
 
 ---
 
-<div align="center">
-
 **⭐ Star this repo if you find TypeMate useful!**
 
 [Report Bug](https://github.com/arsanjani/TypeMate/issues) • [Request Feature](https://github.com/arsanjani/TypeMate/issues)
-
-</div>
