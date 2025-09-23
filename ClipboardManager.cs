@@ -25,6 +25,7 @@ namespace TypeMate
         
         private static readonly object ClipboardLock = new object();
         private static IntPtr _lastForegroundWindow = IntPtr.Zero;
+        private static int _captureInProgress = 0;
 
         public static void CaptureSelectedText()
         {
@@ -32,24 +33,28 @@ namespace TypeMate
             {
                 try
                 {
+                    if (System.Threading.Interlocked.Exchange(ref _captureInProgress, 1) == 1)
+                    {
+                        Logger.LogWarning("Capture skipped because another capture is in progress");
+                        return;
+                    }
+
                     Logger.LogInfo("Starting text capture process");
                     
                     // Store the currently active window
                     _lastForegroundWindow = GetForegroundWindow();
-                    
-                    // Wait a bit to ensure the hotkey is released
-                    await Task.Delay(150);
 
-                    // Store original clipboard content to restore later if needed
-                    string? originalClipboard = null;
-                    try
+                    // Wait a bit to ensure the hotkey is released
+                    await Task.Delay(120);
+
+                    // Restore focus to the original window before sending Ctrl+C
+                    if (_lastForegroundWindow != IntPtr.Zero)
                     {
-                        originalClipboard = await GetClipboardTextSafely();
+                        SetForegroundWindow(_lastForegroundWindow);
+                        await Task.Delay(120);
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.LogWarning($"Could not backup original clipboard content: {ex.Message}");
-                    }
+
+                    // Attempt to copy current selection
 
                     // Send Ctrl+C to copy selected text
                     if (!SendCtrlC())
@@ -60,24 +65,15 @@ namespace TypeMate
                     }
 
                     // Wait for clipboard to be populated
-                    await Task.Delay(200);
+                    await Task.Delay(220);
 
                     // Get text from clipboard with retries
                     string selectedText = await GetClipboardTextWithRetry();
 
                     if (!string.IsNullOrWhiteSpace(selectedText))
                     {
-                        // Check if the text is different from what was originally in clipboard
-                        if (selectedText != originalClipboard)
-                        {
-                            Logger.LogInfo($"Captured text: {selectedText.Length} characters");
-                            ShowPopupWindow(selectedText);
-                        }
-                        else
-                        {
-                            Logger.LogInfo("No new text was selected");
-                            ShowInfoMessage("No text was selected. Please select some text and try again.");
-                        }
+                        Logger.LogInfo($"Captured text: {selectedText.Length} characters");
+                        ShowPopupWindow(selectedText);
                     }
                     else
                     {
@@ -89,6 +85,10 @@ namespace TypeMate
                 {
                     Logger.LogError("Error during text capture process", ex);
                     ShowErrorMessage("An error occurred while capturing text. Please try again.");
+                }
+                finally
+                {
+                    System.Threading.Interlocked.Exchange(ref _captureInProgress, 0);
                 }
             });
         }
@@ -180,8 +180,8 @@ namespace TypeMate
 
         private static async Task<string> GetClipboardTextWithRetry()
         {
-            const int maxRetries = 3;
-            const int retryDelay = 100;
+            const int maxRetries = 6;
+            int retryDelay = 120;
 
             for (int i = 0; i < maxRetries; i++)
             {
@@ -201,6 +201,7 @@ namespace TypeMate
                 if (i < maxRetries - 1)
                 {
                     await Task.Delay(retryDelay);
+                    retryDelay = Math.Min(retryDelay + 80, 400);
                 }
             }
 

@@ -1,6 +1,6 @@
-# TypeMate - Text Rewriting Tool
+# TypeMate - AI-Powered Text Capture & Rewriting Tool
 
-A minimal C# WPF application that runs in the Windows system tray, listens for a global hotkey, captures selected text from any application, and provides a popup to rewrite and replace the original text.
+🚀 **Instant text capture and AI-enhanced rewriting** - Select any text, press Ctrl+Alt+R, and transform your writing with this lightweight Windows tray application. Perfect for writers, developers, and productivity enthusiasts.
 
 ## Features
 
@@ -75,3 +75,19 @@ A minimal C# WPF application that runs in the Windows system tray, listens for a
 - Fixed hotkey (Ctrl+Alt+R) - no customization UI
 - Plain text only - no rich text formatting
 - Windows only - no cross-platform support
+
+---
+
+## Topics
+
+`text-capture` `text-rewriting` `productivity-tool` `wpf-application` `system-tray` `global-hotkey` `clipboard-manager` `writing-assistant` `dotnet-8` `c-sharp`
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if you find TypeMate useful!**
+
+[Report Bug](https://github.com/arsanjani/TypeMate/issues) • [Request Feature](https://github.com/arsanjani/TypeMate/issues)
+
+</div>

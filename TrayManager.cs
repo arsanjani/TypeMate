@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace TypeMate
@@ -32,13 +33,14 @@ namespace TypeMate
                 
                 // Create a simple icon (you can replace this with a proper icon file)
                 _notifyIcon.Icon = CreateDefaultIcon();
-                _notifyIcon.Text = "TypeMate - Text Rewriting Tool (Ctrl+Alt+R)";
+                _notifyIcon.Text = "TypeMate - AI Writing Assistant";
                 _notifyIcon.Visible = true;
 
                 // Create context menu
                 CreateContextMenu();
 
-                // Double-click to show info
+                // Left-click to open freestyle editor; double-click also opens freestyle
+                _notifyIcon.MouseClick += OnMouseClick;
                 _notifyIcon.DoubleClick += OnDoubleClick;
                 
                 // Handle potential icon recreation on Windows session changes
@@ -56,15 +58,20 @@ namespace TypeMate
             try
             {
                 var contextMenu = new ContextMenuStrip();
-                
+
+                // Add Freestyle editor item
+                var freestyleMenuItem = new ToolStripMenuItem("Freestyle Editor");
+                freestyleMenuItem.Click += OnFreestyleClick;
+                contextMenu.Items.Add(freestyleMenuItem);
+
+                // Add separator
+                contextMenu.Items.Add(new ToolStripSeparator());
+
                 // Add About item
                 var aboutMenuItem = new ToolStripMenuItem("About TypeMate");
                 aboutMenuItem.Click += OnAboutClick;
                 contextMenu.Items.Add(aboutMenuItem);
-                
-                // Add separator
-                contextMenu.Items.Add(new ToolStripSeparator());
-                
+
                 // Add Exit item
                 var exitMenuItem = new ToolStripMenuItem("Exit");
                 exitMenuItem.Click += OnExitClick;
@@ -82,11 +89,26 @@ namespace TypeMate
             }
         }
 
+        private void OnMouseClick(object? sender, MouseEventArgs e)
+        {
+            try
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    OpenFreestyleEditor();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error handling tray icon click", ex);
+            }
+        }
+
         private void OnDoubleClick(object? sender, EventArgs e)
         {
             try
             {
-                ShowAboutMessage();
+                OpenFreestyleEditor();
             }
             catch (Exception ex)
             {
@@ -147,12 +169,28 @@ namespace TypeMate
         {
             try
             {
-                var message = "TypeMate - Text Rewriting Tool\n\n" +
-                             "Press Ctrl+Alt+R to capture and rewrite selected text.\n\n" +
-                             "Running in background...";
-                
-                System.Windows.Forms.MessageBox.Show(message, "TypeMate", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
+                {
+                    try
+                    {
+                        var aboutDialog = new AboutDialog();
+                        aboutDialog.Show();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("Error opening about dialog", ex);
+
+                        // Fallback to simple message box if dialog fails
+                        var message =
+                            "TypeMate — AI-powered writing companion\n\n" +
+                            "• Press Ctrl+Alt+R to capture selected text and open the editor\n" +
+                            "• Click the tray icon to open the Freestyle Editor\n\n" +
+                            "GitHub: https://github.com/arsanjani/TypeMate";
+
+                        System.Windows.Forms.MessageBox.Show(message, "About TypeMate",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -160,17 +198,64 @@ namespace TypeMate
             }
         }
 
+        private void OpenFreestyleEditor()
+        {
+            try
+            {
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
+                {
+                    try
+                    {
+                        var popup = new PopupWindow(string.Empty);
+                        popup.Show();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError("Error opening freestyle editor", ex);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error dispatching freestyle editor open", ex);
+            }
+        }
+
+        private void OnFreestyleClick(object? sender, EventArgs e)
+        {
+            OpenFreestyleEditor();
+        }
+
+
         private Icon CreateDefaultIcon()
         {
-            // Create a simple 16x16 icon with a "T" character
+            // Create a 16x16 rectangle icon with a blue background and centered white "T"
             var bitmap = new Bitmap(16, 16);
             using (var graphics = Graphics.FromImage(bitmap))
             {
-                graphics.Clear(Color.Blue);
-                graphics.DrawString("T", new Font("Arial", 10, FontStyle.Bold),
-                                  Brushes.White, new PointF(2, 1));
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                graphics.Clear(Color.Transparent);
+
+                var backgroundColor = Color.FromArgb(33, 150, 243); // Material Design Blue (#2196F3)
+
+                // Draw a simple rectangle background
+                var rectArea = new Rectangle(0, 0, 16, 16);
+                using (var brush = new SolidBrush(backgroundColor))
+                {
+                    graphics.FillRectangle(brush, rectArea);
+                }
+
+                // Draw the "T" centered in the rectangle
+                using (var font = new Font("Segoe UI", 10f, FontStyle.Bold, GraphicsUnit.Point))
+                using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+                {
+                    var textRect = new RectangleF(1f, 1f, 16f, 16f);
+                    graphics.DrawString("T", font, Brushes.White, textRect, format);
+                }
             }
-            
+
             return Icon.FromHandle(bitmap.GetHicon());
         }
 

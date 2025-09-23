@@ -230,13 +230,31 @@
             <StackPanel Grid.Row="4" 
                         Orientation="Horizontal" 
                         HorizontalAlignment="Right">
-                <Button x:Name="RewriteButton"
-                        Content="✨ Rewrite"
+                <Button x:Name="AiButton"
                         Style="{StaticResource OutlinedButton}"
-                        Width="110"
+                        Width="140"
                         Height="36"
                         Margin="0,0,12,0"
-                        Click="RewriteButton_Click"/>
+                        Click="AiButton_Click">
+                    <Button.Content>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="✨ AI" Margin="0,0,6,0"/>
+                            <TextBlock Text="▼"/>
+                        </StackPanel>
+                    </Button.Content>
+                    <Button.ContextMenu>
+                        <ContextMenu x:Name="AiContextMenu">
+                            <MenuItem Header="Easy read" Click="AiMenu_EasyRead_Click"/>
+                            <MenuItem Header="Witty" Click="AiMenu_Witty_Click"/>
+                            <MenuItem Header="Formal" Click="AiMenu_Formal_Click"/>
+                            <MenuItem Header="Summarise" Click="AiMenu_Summarise_Click"/>
+                            <MenuItem Header="Expand" Click="AiMenu_Expand_Click"/>
+                            <MenuItem Header="LinkedIn post" Click="AiMenu_LinkedIn_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Set API Key…" Click="AiMenu_SetApiKey_Click"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
                 <Button x:Name="InsertButton"
                         Content="✅ Insert"
                         Style="{StaticResource ContainedButton}"
@@ -251,6 +269,17 @@
                         Height="36"
                         Click="CancelButton_Click"/>
             </StackPanel>
+
+            <!-- Loading Overlay -->
+            <Grid x:Name="LoadingOverlay" Visibility="Collapsed" Grid.RowSpan="5">
+                <Border Background="#80000000"/>
+                <Border Width="260" Padding="20" CornerRadius="8" Background="White" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock Text="Rewriting with AI…" FontFamily="Segoe UI" FontSize="14" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12" HorizontalAlignment="Center"/>
+                        <ProgressBar IsIndeterminate="True" Height="6" Foreground="{StaticResource PrimaryMain}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
     </Border>
 </Window>

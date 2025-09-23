@@ -1,4 +1,7 @@
+using System;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace TypeMate
 {
@@ -12,14 +15,96 @@ namespace TypeMate
             TextEditor.SelectAll();
         }
 
-        private void RewriteButton_Click(object sender, RoutedEventArgs e)
+        private void AiButton_Click(object sender, RoutedEventArgs e)
         {
-            // MVP implementation: prepend [Rewritten] to the text
-            string originalText = TextEditor.Text;
-            if (!originalText.StartsWith("[Rewritten] "))
+            if (AiButton.ContextMenu != null)
             {
-                TextEditor.Text = "[Rewritten] " + originalText;
+                AiButton.ContextMenu.PlacementTarget = AiButton;
+                AiButton.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                AiButton.ContextMenu.IsOpen = true;
             }
+        }
+
+        private async void AiMenu_EasyRead_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.EasyRead);
+        private async void AiMenu_Witty_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.Witty);
+        private async void AiMenu_Formal_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.Formal);
+        private async void AiMenu_Summarise_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.Summarise);
+        private async void AiMenu_Expand_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.Expand);
+        private async void AiMenu_LinkedIn_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.LinkedInPost);
+
+        private async void AiMenu_SetApiKey_Click(object sender, RoutedEventArgs e)
+        {
+            await PromptForApiKeyAsync();
+        }
+
+        private async Task<bool> EnsureApiKeyAsync()
+        {
+            string? key = await ApiKeyStore.GetOpenAIApiKeyAsync();
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return await PromptForApiKeyAsync();
+            }
+            return true;
+        }
+
+        private async Task<bool> PromptForApiKeyAsync()
+        {
+            ApiKeyDialog dialog = new ApiKeyDialog
+            {
+                Owner = this
+            };
+            bool? result = dialog.ShowDialog();
+            await Task.CompletedTask;
+            return result == true;
+        }
+
+        private async Task RewriteWithStyle(RewriteStyle style)
+        {
+            try
+            {
+                string source = TextEditor.Text ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(source))
+                {
+                    System.Windows.MessageBox.Show("No text to rewrite.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                bool ok = await EnsureApiKeyAsync();
+                if (!ok)
+                {
+                    return;
+                }
+
+                SetUiBusy(true);
+
+                string? rewritten = await OpenAIService.RewriteAsync(source, style);
+                if (string.IsNullOrWhiteSpace(rewritten))
+                {
+                    System.Windows.MessageBox.Show("Failed to rewrite. Check your API key and network.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                TextEditor.Text = rewritten;
+                TextEditor.Focus();
+                TextEditor.SelectAll();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("AI rewrite error", ex);
+                System.Windows.MessageBox.Show("An error occurred while rewriting.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                SetUiBusy(false);
+            }
+        }
+
+        private void SetUiBusy(bool isBusy)
+        {
+            LoadingOverlay.Visibility = isBusy ? Visibility.Visible : Visibility.Collapsed;
+            AiButton.IsEnabled = !isBusy;
+            InsertButton.IsEnabled = !isBusy;
+            CancelButton.IsEnabled = !isBusy;
         }
 
         private async void InsertButton_Click(object sender, RoutedEventArgs e)
@@ -38,7 +123,7 @@ namespace TypeMate
 
                 // Disable buttons to prevent multiple clicks
                 InsertButton.IsEnabled = false;
-                RewriteButton.IsEnabled = false;
+                AiButton.IsEnabled = false;
                 CancelButton.IsEnabled = false;
 
                 // Set clipboard with the modified text
@@ -52,7 +137,7 @@ namespace TypeMate
                     
                     // Re-enable buttons
                     InsertButton.IsEnabled = true;
-                    RewriteButton.IsEnabled = true;
+                    AiButton.IsEnabled = true;
                     CancelButton.IsEnabled = true;
                     return;
                 }
@@ -77,7 +162,7 @@ namespace TypeMate
                 
                 // Re-enable buttons
                 InsertButton.IsEnabled = true;
-                RewriteButton.IsEnabled = true;
+                AiButton.IsEnabled = true;
                 CancelButton.IsEnabled = true;
             }
         }
