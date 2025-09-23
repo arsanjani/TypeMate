@@ -1,0 +1,95 @@
+# =========================
+# GitIgnore for WPF/.NET & Visual Studio
+# Based on GitHub's VisualStudio.gitignore with common .NET extras
+# =========================
+
+# IDE settings
+.vs/
+.vscode/
+*.code-workspace
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Build results
+bin/
+obj/
+Debug/
+Release/
+debug/
+release/
+x64/
+x86/
+ARM/
+ARM64/
+bld/
+out/
+
+# MSBuild logs
+msbuild.log
+msbuild.err
+msbuild.wrn
+*.binlog
+
+# Cache / database files
+*.cache
+*.dbmdl
+*.dbproj.schemaview
+*.opendb
+*.VC.db
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+*.nuget.props
+*.nuget.targets
+
+# ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+*.sln.iml
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# StyleCop
+StyleCop.Cache
+
+# Publish artifacts
+publish/
+artifacts/
+
+# Logs
+*.log
+
+# Profiling
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# Others
+*.svclog
+*.pidb
+*.scc
+
+# Windows
+Thumbs.db
+Desktop.ini
+
