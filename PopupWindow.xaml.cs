@@ -31,6 +31,7 @@ namespace TypeMate
         private async void AiMenu_Summarise_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.Summarise);
         private async void AiMenu_Expand_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.Expand);
         private async void AiMenu_LinkedIn_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.LinkedInPost);
+        private async void AiMenu_PromptOptimizer_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.PromptOptimizer);
 
         private async void AiMenu_SetApiKey_Click(object sender, RoutedEventArgs e)
         {

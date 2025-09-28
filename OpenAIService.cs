@@ -14,7 +14,8 @@ namespace TypeMate
 		Formal,
 		Summarise,
 		Expand,
-		LinkedInPost
+		LinkedInPost,
+		PromptOptimizer
 	}
 
 	public static class OpenAIService
@@ -43,6 +44,8 @@ namespace TypeMate
 					return "You are an explainer. Expand the user's text by elaborating on important points, adding helpful context and examples, while staying on-topic.";
 				case RewriteStyle.LinkedInPost:
 					return "You are a LinkedIn ghostwriter. Rewrite the user's text as a compelling LinkedIn post with a strong hook, clear value, and a call to action. Keep it professional and authentic.";
+				case RewriteStyle.PromptOptimizer:
+					return "You are a senior prompt engineer. Transform the user's input into a concise, high-signal prompt suitable for a code editor agent like Cursor AI.\n\nRequirements:\n- Start with a one-line goal statement (imperative voice).\n- Include only essential context and constraints.\n- List 3-6 high-level steps the agent should take.\n- Specify expected outputs and acceptance criteria.\n- If input includes code, preserve important identifiers and reference them succinctly.\n- Avoid fluff; output only the final optimized prompt ready to paste into Cursor.";
 				default:
 					return "You are a helpful writing assistant. Improve clarity and impact.";
 			}
