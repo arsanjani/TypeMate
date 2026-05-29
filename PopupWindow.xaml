@@ -250,6 +250,7 @@
                             <MenuItem Header="Summarise" Click="AiMenu_Summarise_Click"/>
                             <MenuItem Header="Expand" Click="AiMenu_Expand_Click"/>
                             <MenuItem Header="LinkedIn post" Click="AiMenu_LinkedIn_Click"/>
+                            <MenuItem Header="English to Farsi" Click="AiMenu_EnglishToFarsi_Click"/>
                             <MenuItem Header="Convert to AI prompt" Click="AiMenu_PromptOptimizer_Click"/>
                             <Separator/>
                             <MenuItem Header="Set API Key…" Click="AiMenu_SetApiKey_Click"/>

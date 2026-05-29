@@ -15,7 +15,8 @@ namespace TypeMate
 		Summarise,
 		Expand,
 		LinkedInPost,
-		PromptOptimizer
+		PromptOptimizer,
+		EnglishToFarsi
 	}
 
 	public static class OpenAIService
@@ -36,8 +37,10 @@ namespace TypeMate
 
 		private static bool IsOllamaModel(string? model)
 		{
-			return string.Equals(model, "nemotron-3-nano:4b", StringComparison.OrdinalIgnoreCase) ||
-			       string.Equals(model, "gemma4:latest", StringComparison.OrdinalIgnoreCase);
+			if (string.IsNullOrWhiteSpace(model)) return false;
+			
+			string lower = model.ToLowerInvariant();
+			return lower.Contains("nemotron") || lower.Contains("gemma") || lower.Contains("qwen") || lower.Contains("translategemma");
 		}
 
 		private static string BuildSystemPrompt(RewriteStyle style)
@@ -58,6 +61,8 @@ namespace TypeMate
 					return "You are a LinkedIn ghostwriter. Rewrite the user's text as a compelling LinkedIn post with a strong hook, clear value, and a call to action. Keep it professional and authentic.";
 				case RewriteStyle.PromptOptimizer:
 					return "You are a senior prompt engineer. Transform the user's input into a concise, high-signal prompt suitable for a code editor agent like Cursor AI.\n\nRequirements:\n- Start with a one-line goal statement (imperative voice).\n- Include only essential context and constraints.\n- List 3-6 high-level steps the agent should take.\n- Specify expected outputs and acceptance criteria.\n- If input includes code, preserve important identifiers and reference them succinctly.\n- Avoid fluff; output only the final optimized prompt ready to paste into Cursor.";
+			case RewriteStyle.EnglishToFarsi:
+					return "You are a professional English (en) to Persian (fa-IR) translator. Your goal is to accurately convey the meaning and nuances of the original English text while adhering to Persian grammar, vocabulary, and cultural sensitivities.\n\nProduce only the Persian translation, without any additional explanations or commentary. Please translate the following English text into the Persian:\n\n";
 				default:
 					return "You are a helpful writing assistant. Improve clarity and impact.";
 			}
