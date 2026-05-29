@@ -4,13 +4,30 @@
 
 ## Features
 
+### AI Providers
+
+- **OpenAI** — Use ChatGPT models (o4-mini, gpt-4o-mini) for text rewriting
+- **Ollama** — Run local models on your machine. Supported model patterns: `nemotron`, `gemma`, `qwen`, `translategemma`
+
+### Rewrite Styles
+
+| Style | Description |
+|-------|-------------|
+| Easy Read | Clear, simple, accessible language |
+| Witty | Playful, clever phrasing with personality |
+| Formal | Polished, professional tone |
+| Summarise | Concise bullet-point summary |
+| Expand | Elaborate with helpful context |
+| LinkedIn Post | Professional LinkedIn-style post |
+| Prompt Optimizer | Transform input into a high-signal prompt for AI agents |
+| English to Farsi | Translate English to Persian (best with `translategemma:4b`) |
+
+### Core Features
+
 - **System Tray Operation**: Runs quietly in the background with a system tray icon
 - **Global Hotkey**: Press `Ctrl + Alt + R` from any application to capture selected text
 - **Text Capture**: Automatically copies selected text using simulated `Ctrl+C`
 - **Popup Editor**: Shows a popup window where you can edit the captured text
-- **AI Text Rewriting**: Uses OpenAI to rewrite captured text with a selection of styles (EasyRead, Witty, Formal, Summarise, Expand, LinkedInPost). Requires an OpenAI API key configured in the app.
-- **Ollama Model Support**: Rewrite text using local Ollama models - select from available models with names and descriptions
-- **English to Farsi Translation**: Translate captured text to Farsi using translate-gemma:4b (recommended model for best results)
 - **Text Insertion**: Click "Insert" to paste the modified text back to the original application
 
 ## How to Use
