@@ -1,7 +1,7 @@
 <Window x:Class="TypeMate.ApiKeyDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="OpenAI Configuration" Width="400" Height="380"
+        Title="AI Configuration" Width="400" Height="420"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Topmost="True"
@@ -239,8 +239,8 @@
             </Grid.RowDefinitions>
 
             <!-- Dialog Title -->
-            <TextBlock Grid.Row="0" 
-                       Text="OpenAI Configuration" 
+            <TextBlock x:Name="DialogTitle"
+                       Text="AI Configuration" 
                        FontFamily="Segoe UI" 
                        FontSize="20" 
                        FontWeight="Medium"
@@ -250,15 +250,26 @@
             <!-- Dialog Content -->
             <StackPanel Grid.Row="1">
                 <!-- Helper Text -->
-                <TextBlock Text="Configure your OpenAI API settings. Your credentials are stored securely on this device." 
+                <TextBlock x:Name="HelperText"
+                           Text="Configure your OpenAI API settings. Your credentials are stored securely on this device." 
                            FontFamily="Segoe UI" 
                            FontSize="14"
                            Foreground="{StaticResource TextSecondary}" 
                            TextWrapping="Wrap"
                            Margin="0,0,0,8"/>
 
+                <!-- Ollama Info Text (hidden by default) -->
+                <TextBlock x:Name="OllamaInfoText"
+                           Text="These models run locally via Ollama (localhost:11434). No API key required." 
+                           FontFamily="Segoe UI" 
+                           FontSize="12"
+                           Foreground="#388E3C" 
+                           TextWrapping="Wrap"
+                           Visibility="Hidden"
+                           Margin="0,0,0,8"/>
+
                 <!-- API Key Field -->
-                <StackPanel Margin="0,0,0,16">
+                <StackPanel x:Name="ApiKeyPanel" Margin="0,0,0,16">
                     <TextBlock Text="API Key *" 
                                FontFamily="Segoe UI" 
                                FontSize="12" 
@@ -266,7 +277,8 @@
                                Foreground="{StaticResource OnSurface}" 
                                Margin="0,0,0,6"/>
                     <PasswordBox x:Name="ApiKeyBox" 
-                                 Style="{StaticResource OutlinedPasswordBox}" FontSize="4"/>
+                                 Style="{StaticResource OutlinedPasswordBox}" 
+                                 FontSize="14"/>
                 </StackPanel>
 
                 <!-- Model Selection Field -->
@@ -278,15 +290,27 @@
                                Foreground="{StaticResource OnSurface}" 
                                Margin="0,0,0,6"/>
                     <ComboBox x:Name="ModelComboBox" 
-                              Style="{StaticResource OutlinedComboBox}">
-                        <ComboBoxItem Content="gpt-4o-mini" IsSelected="True"/>
+                              Style="{StaticResource OutlinedComboBox}"
+                              SelectionChanged="ModelComboBox_SelectionChanged">
+                        <!-- OpenAI Models -->
+                        <ComboBoxItem Content="gpt-4o-mini"/>
                         <ComboBoxItem Content="gpt-4o"/>
                         <ComboBoxItem Content="gpt-4-turbo"/>
                         <ComboBoxItem Content="gpt-3.5-turbo"/>
                         <ComboBoxItem Content="o1-mini"/>
                         <ComboBoxItem Content="o1-preview"/>
+                        <!-- Ollama Models -->
+                        <Separator/>
+                        <TextBlock Text="── Ollama Models ──" 
+                                   FontSize="11" 
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   Margin="14,4,0,0"/>
+                        <ComboBoxItem Content="nemotron-3-nano:4b"/>
+                        <ComboBoxItem Content="gemma4:latest"/>
                     </ComboBox>
-                    <TextBlock Text="Select the OpenAI model to use for text processing" 
+                    <TextBlock x:Name="ModelHelperText"
+                               Text="Select the model to use for text processing" 
                                FontFamily="Segoe UI" 
                                FontSize="11" 
                                Foreground="{StaticResource TextSecondary}" 
@@ -310,5 +334,3 @@
         </Grid>
     </Border>
 </Window>
-
-

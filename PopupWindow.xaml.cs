@@ -40,6 +40,12 @@ namespace TypeMate
 
         private async Task<bool> EnsureApiKeyAsync()
         {
+            string? provider = await ApiKeyStore.GetProviderAsync();
+            if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
             string? key = await ApiKeyStore.GetOpenAIApiKeyAsync();
             if (string.IsNullOrWhiteSpace(key))
             {

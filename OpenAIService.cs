@@ -25,8 +25,20 @@ namespace TypeMate
 			Timeout = TimeSpan.FromSeconds(45)
 		};
 
-		private const string PreferredModel = "o4-mini"; // fast, high-quality reasoning (fallback if unavailable)
-		private const string FallbackModel = "gpt-4o-mini"; // widely available
+		private static readonly HttpClient OllamaHttp = new HttpClient
+		{
+			Timeout = TimeSpan.FromSeconds(60)
+		};
+
+		private const string PreferredModel = "o4-mini";
+		private const string FallbackModel = "gpt-4o-mini";
+		private const string OllamaEndpoint = "http://localhost:11434/v1/chat/completions";
+
+		private static bool IsOllamaModel(string? model)
+		{
+			return string.Equals(model, "nemotron-3-nano:4b", StringComparison.OrdinalIgnoreCase) ||
+			       string.Equals(model, "gemma4:latest", StringComparison.OrdinalIgnoreCase);
+		}
 
 		private static string BuildSystemPrompt(RewriteStyle style)
 		{
@@ -51,44 +63,74 @@ namespace TypeMate
 			}
 		}
 
-	public static async Task<string?> RewriteAsync(string input, RewriteStyle style)
-	{
-		string? apiKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
-		if (string.IsNullOrWhiteSpace(apiKey))
-		{
-			return null;
-		}
-
-		try
+		private static async Task<string?> CallOpenAIAsync(string model, string apiKey, RewriteStyle style, string input)
 		{
 			Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-			// Ensure no stale custom headers linger between calls
 			if (Http.DefaultRequestHeaders.Contains("OpenAI-Beta"))
 			{
 				Http.DefaultRequestHeaders.Remove("OpenAI-Beta");
 			}
 
-			async Task<string?> CallAsync(string model)
+			var payload = new
 			{
-				var payload = new
+				model = model,
+				messages = new object[]
 				{
-					model = model,
-					messages = new object[]
-					{
-						new { role = "system", content = BuildSystemPrompt(style) },
-						new { role = "user", content = input }
-					},
-					temperature = 0.7,
-					max_tokens = 512
-				};
+					new { role = "system", content = BuildSystemPrompt(style) },
+					new { role = "user", content = input }
+				},
+				temperature = 0.7,
+				max_tokens = 512
+			};
 
-				string json = JsonSerializer.Serialize(payload);
-				using StringContent body = new StringContent(json, Encoding.UTF8, "application/json");
-				using HttpResponseMessage resp = await Http.PostAsync("https://api.openai.com/v1/chat/completions", body);
+			string json = JsonSerializer.Serialize(payload);
+			using StringContent body = new StringContent(json, Encoding.UTF8, "application/json");
+			using HttpResponseMessage resp = await Http.PostAsync("https://api.openai.com/v1/chat/completions", body);
+			string respText = await resp.Content.ReadAsStringAsync();
+			if (!resp.IsSuccessStatusCode)
+			{
+				Logger.LogWarning($"OpenAI error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
+				return null;
+			}
+
+			using JsonDocument doc = JsonDocument.Parse(respText);
+			JsonElement root = doc.RootElement;
+			if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
+			{
+				JsonElement first = choices[0];
+				if (first.TryGetProperty("message", out JsonElement message) && message.TryGetProperty("content", out JsonElement content))
+				{
+					return content.GetString();
+				}
+			}
+			return null;
+		}
+
+		private static async Task<string?> CallOllamaAsync(string model, RewriteStyle style, string input)
+		{
+			var payload = new
+			{
+				model = model,
+				messages = new object[]
+				{
+					new { role = "system", content = BuildSystemPrompt(style) },
+					new { role = "user", content = input }
+				},
+				temperature = 0.7,
+				stream = false
+			};
+
+			string json = JsonSerializer.Serialize(payload);
+			using StringContent body = new StringContent(json, Encoding.UTF8, "application/json");
+
+			try
+			{
+				using HttpResponseMessage resp = await OllamaHttp.PostAsync(OllamaEndpoint, body);
 				string respText = await resp.Content.ReadAsStringAsync();
+
 				if (!resp.IsSuccessStatusCode)
 				{
-					Logger.LogWarning($"OpenAI error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
+					Logger.LogWarning($"Ollama error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
 					return null;
 				}
 
@@ -104,26 +146,49 @@ namespace TypeMate
 				}
 				return null;
 			}
-
-			// Get user's preferred model, fallback to configured defaults
-			string? userPreferredModel = await ApiKeyStore.GetPreferredModelAsync();
-			string primaryModel = userPreferredModel ?? PreferredModel;
-
-			// Try user's preferred model first, then the configured fallback
-			string? result = await CallAsync(primaryModel);
-			if (string.IsNullOrWhiteSpace(result) && primaryModel != FallbackModel)
+			catch (Exception ex)
 			{
-				result = await CallAsync(FallbackModel);
+				Logger.LogError($"Ollama connection failed for model {model}", ex);
+				return null;
 			}
-			return result;
 		}
-		catch (Exception ex)
+
+		public static async Task<string?> RewriteAsync(string input, RewriteStyle style)
 		{
-			Logger.LogError("OpenAI rewrite failed", ex);
-			return null;
+			string? userPreferredModel = await ApiKeyStore.GetPreferredModelAsync();
+			if (string.IsNullOrWhiteSpace(userPreferredModel))
+			{
+				return null;
+			}
+
+			bool isOllama = IsOllamaModel(userPreferredModel);
+
+			if (isOllama)
+			{
+				return await CallOllamaAsync(userPreferredModel, style, input);
+			}
+
+			string? apiKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
+			if (string.IsNullOrWhiteSpace(apiKey))
+			{
+				return null;
+			}
+
+			try
+			{
+				// Try user's preferred model first, then the configured fallback
+				string? result = await CallOpenAIAsync(userPreferredModel, apiKey, style, input);
+				if (string.IsNullOrWhiteSpace(result) && userPreferredModel != FallbackModel)
+				{
+					result = await CallOpenAIAsync(FallbackModel, apiKey, style, input);
+				}
+				return result;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("OpenAI rewrite failed", ex);
+				return null;
+			}
 		}
-	}
 	}
 }
-
-

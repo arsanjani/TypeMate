@@ -10,129 +10,167 @@ namespace TypeMate
 		public string? SavedKey { get; private set; }
 		public string? SavedModel { get; private set; }
 
-	public ApiKeyDialog()
-	{
-		InitializeComponent();
-		Loaded += ApiKeyDialog_Loaded;
-		ApiKeyBox.PasswordChanged += ApiKeyBox_PasswordChanged;
-	}
-
-	private void ApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
-	{
-		// Clear the placeholder flag when user starts typing
-		if (ApiKeyBox.Tag?.ToString() == "HasExistingKey")
+		public ApiKeyDialog()
 		{
-			ApiKeyBox.Tag = null;
+			InitializeComponent();
+			// Set default selection
+			ModelComboBox.SelectedIndex = 0;
+			Loaded += ApiKeyDialog_Loaded;
+			ApiKeyBox.PasswordChanged += ApiKeyBox_PasswordChanged;
 		}
-	}
 
 		private async void ApiKeyDialog_Loaded(object sender, RoutedEventArgs e)
 		{
 			await LoadCurrentSettingsAsync();
 		}
 
+		private void ApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
+		{
+			if (ApiKeyBox.Tag?.ToString() == "HasExistingKey")
+			{
+				ApiKeyBox.Tag = null;
+			}
+		}
+
 		private async Task LoadCurrentSettingsAsync()
 		{
 			try
 			{
-				// Check if there's an existing API key and show placeholder
-				string? existingKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
-				if (!string.IsNullOrEmpty(existingKey))
-				{
-					// Show placeholder characters to indicate an API key exists
-					ApiKeyBox.Password = "••••••••••••••••••••••••••••••••••••••••••••••••••••";
-					ApiKeyBox.Tag = "HasExistingKey"; // Flag to track this is placeholder
-				}
+				// Load current provider and existing key
+				Task<string?> providerTask = ApiKeyStore.GetProviderAsync();
+				Task<string?> existingKeyTask = ApiKeyStore.GetOpenAIApiKeyAsync();
+				Task<string?> currentModelTask = ApiKeyStore.GetPreferredModelAsync();
 
-				// Load existing model preference
-				string? currentModel = await ApiKeyStore.GetPreferredModelAsync();
+				await Task.WhenAll(providerTask, existingKeyTask, currentModelTask);
+
+				string? provider = providerTask.Result;
+				string? existingKey = existingKeyTask.Result;
+				bool hasKey = !string.IsNullOrEmpty(existingKey);
+				string? currentModel = currentModelTask.Result;
+
+				// Set selected model if we have a saved one
 				if (!string.IsNullOrEmpty(currentModel))
 				{
-					// Find and select the current model in the ComboBox
-					bool modelFound = false;
-					foreach (ComboBoxItem item in ModelComboBox.Items)
+					// Skip Separator and TextBlock, only check ComboBoxItem
+					int idx = 0;
+					foreach (var item in ModelComboBox.Items)
 					{
-						if (item.Content?.ToString() == currentModel)
+						if (item is ComboBoxItem cbi && cbi.Content?.ToString() == currentModel)
 						{
-							ModelComboBox.SelectedItem = item;
-							modelFound = true;
+							ModelComboBox.SelectedIndex = idx;
 							break;
 						}
-					}
-					
-					// If the stored model isn't in our list, select the default
-					if (!modelFound && ModelComboBox.Items.Count > 0)
-					{
-						ModelComboBox.SelectedIndex = 0; // Select first item (gpt-4o-mini)
+						idx++;
 					}
 				}
-				else if (ModelComboBox.Items.Count > 0)
+
+				// Sync UI based on selection
+				ModelComboBox_SelectionChanged(null!, null!);
+
+				// Set placeholder if existing key exists
+				if (hasKey)
 				{
-					// No stored preference, select default
-					ModelComboBox.SelectedIndex = 0; // Select first item (gpt-4o-mini)
+					ApiKeyBox.Password = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
+					ApiKeyBox.Tag = "HasExistingKey";
 				}
 			}
 			catch (Exception ex)
 			{
 				Logger.LogError("Error loading current settings", ex);
-				// Fallback to default selection if error occurs
-				if (ModelComboBox.Items.Count > 0)
+			}
+		}
+
+		private void ModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			if (ModelComboBox.SelectedItem is ComboBoxItem selectedItem)
+			{
+				string? model = selectedItem.Content?.ToString();
+				bool isOllama = IsOllamaModel(model);
+
+				ApiKeyPanel.Visibility = isOllama ? Visibility.Collapsed : Visibility.Visible;
+				OllamaInfoText.Visibility = isOllama ? Visibility.Visible : Visibility.Collapsed;
+
+				if (isOllama)
 				{
-					ModelComboBox.SelectedIndex = 0;
+					HelperText.Text = "These models run locally via Ollama (localhost:11434). No API key required.";
+				}
+				else
+				{
+					HelperText.Text = "Configure your OpenAI API settings. Your credentials are stored securely on this device.";
 				}
 			}
+		}
+
+		private bool IsOllamaModel(string? model)
+		{
+			return string.Equals(model, "nemotron-3-nano:4b", StringComparison.OrdinalIgnoreCase) ||
+			       string.Equals(model, "gemma4:latest", StringComparison.OrdinalIgnoreCase);
 		}
 
 		private async void Save_Click(object sender, RoutedEventArgs e)
 		{
 			try
 			{
-				string key = ApiKeyBox.Password?.Trim() ?? string.Empty;
-				
-				// Check if user didn't change the placeholder (keeping existing key)
-				bool hasExistingKey = ApiKeyBox.Tag?.ToString() == "HasExistingKey";
-				bool isPlaceholder = key.StartsWith("••••");
-				
-				if (hasExistingKey && isPlaceholder)
-				{
-					// User kept the existing key, just update the model
-					string? existingKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
-					if (string.IsNullOrEmpty(existingKey))
-					{
-						System.Windows.MessageBox.Show("Please enter a valid API key.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Information);
-						return;
-					}
-					key = existingKey;
-				}
-				else if (string.IsNullOrWhiteSpace(key) || isPlaceholder)
-				{
-					System.Windows.MessageBox.Show("Please enter a valid API key.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Information);
-					return;
-				}
-
 				// Get selected model
-				string selectedModel = "gpt-4o-mini"; // Default
+				string selectedModel = "gpt-4o-mini";
 				if (ModelComboBox.SelectedItem is ComboBoxItem selectedItem)
 				{
 					selectedModel = selectedItem.Content?.ToString() ?? "gpt-4o-mini";
 				}
 
-				// Save both API key and model
-				bool saved = await ApiKeyStore.SaveOpenAIConfigAsync(key, selectedModel);
-				if (!saved)
+				bool isOllama = IsOllamaModel(selectedModel);
+
+				if (isOllama)
 				{
-					System.Windows.MessageBox.Show("Failed to save OpenAI configuration.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
-					return;
+					// Save Ollama config (no API key needed)
+					bool saved = await ApiKeyStore.SaveOllamaConfigAsync(selectedModel);
+					if (!saved)
+					{
+						System.Windows.MessageBox.Show("Failed to save configuration.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
+						return;
+					}
+				}
+				else
+				{
+					// Validate API key for OpenAI models
+					string key = ApiKeyBox.Password?.Trim() ?? string.Empty;
+					bool hasExistingKey = ApiKeyBox.Tag?.ToString() == "HasExistingKey";
+					bool isPlaceholder = key.StartsWith("\u2022\u2022\u2022\u2022");
+
+					if (hasExistingKey && isPlaceholder)
+					{
+						string? existingKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
+						if (string.IsNullOrEmpty(existingKey))
+						{
+							System.Windows.MessageBox.Show("Please enter a valid API key.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Information);
+							return;
+						}
+						key = existingKey;
+					}
+					else if (string.IsNullOrWhiteSpace(key) || isPlaceholder)
+					{
+						System.Windows.MessageBox.Show("Please enter a valid API key.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Information);
+						return;
+					}
+
+					// Save OpenAI config
+					bool saved = await ApiKeyStore.SaveOpenAIConfigAsync(key, selectedModel);
+					if (!saved)
+					{
+						System.Windows.MessageBox.Show("Failed to save OpenAI configuration.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
+						return;
+					}
+
+					SavedKey = key;
 				}
 
-				SavedKey = key;
 				SavedModel = selectedModel;
 				this.DialogResult = true;
 				this.Close();
 			}
 			catch (Exception ex)
 			{
-				Logger.LogError("Error saving OpenAI configuration", ex);
+				Logger.LogError("Error saving configuration", ex);
 				System.Windows.MessageBox.Show("An error occurred while saving the configuration.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
 			}
 		}
@@ -144,5 +182,3 @@ namespace TypeMate
 		}
 	}
 }
-
-

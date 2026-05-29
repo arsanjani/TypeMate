@@ -12,11 +12,12 @@ namespace TypeMate
 		private const string AppFolderName = "TypeMate";
 		private const string ConfigFileName = "config.json";
 
-	private class ConfigModel
-	{
-		public string? EncryptedOpenAIApiKeyBase64 { get; set; }
-		public string? PreferredModel { get; set; }
-	}
+		private class ConfigModel
+		{
+			public string? EncryptedOpenAIApiKeyBase64 { get; set; }
+			public string? PreferredModel { get; set; }
+			public string? Provider { get; set; } // "openai" or "ollama"
+		}
 
 		public static async Task<string?> GetOpenAIApiKeyAsync()
 		{
@@ -46,143 +47,164 @@ namespace TypeMate
 			}
 		}
 
-	public static async Task<bool> SaveOpenAIApiKeyAsync(string apiKey)
-	{
-		try
+		public static async Task<bool> SaveOpenAIApiKeyAsync(string apiKey)
 		{
-			// Read existing config to preserve model setting
-			ConfigModel config = await GetConfigAsync() ?? new ConfigModel();
-
-			string directory = GetAppDirectory();
-			if (!Directory.Exists(directory))
+			try
 			{
-				Directory.CreateDirectory(directory);
+				// Read existing config to preserve model setting
+				ConfigModel config = await GetConfigAsync() ?? new ConfigModel();
+
+				string directory = GetAppDirectory();
+				if (!Directory.Exists(directory))
+				{
+					Directory.CreateDirectory(directory);
+				}
+
+				byte[] plain = Encoding.UTF8.GetBytes(apiKey);
+				byte[] encrypted = ProtectedData.Protect(plain, optionalEntropy: null, scope: DataProtectionScope.CurrentUser);
+				string base64 = Convert.ToBase64String(encrypted);
+
+				config.EncryptedOpenAIApiKeyBase64 = base64;
+
+				JsonSerializerOptions options = new JsonSerializerOptions
+				{
+					WriteIndented = true
+				};
+
+				string configPath = GetConfigPath();
+				await using FileStream stream = File.Create(configPath);
+				await JsonSerializer.SerializeAsync(stream, config, options);
+				return true;
 			}
-
-			byte[] plain = Encoding.UTF8.GetBytes(apiKey);
-			byte[] encrypted = ProtectedData.Protect(plain, optionalEntropy: null, scope: DataProtectionScope.CurrentUser);
-			string base64 = Convert.ToBase64String(encrypted);
-
-			config.EncryptedOpenAIApiKeyBase64 = base64;
-
-			JsonSerializerOptions options = new JsonSerializerOptions
+			catch (Exception ex)
 			{
-				WriteIndented = true
-			};
-
-			string configPath = GetConfigPath();
-			await using FileStream stream = File.Create(configPath);
-			await JsonSerializer.SerializeAsync(stream, config, options);
-			return true;
-		}
-		catch (Exception ex)
-		{
-			Logger.LogError("Failed to save OpenAI API key", ex);
-			return false;
-		}
-	}
-
-	public static async Task<bool> SaveOpenAIConfigAsync(string apiKey, string preferredModel)
-	{
-		try
-		{
-			string directory = GetAppDirectory();
-			if (!Directory.Exists(directory))
-			{
-				Directory.CreateDirectory(directory);
+				Logger.LogError("Failed to save OpenAI API key", ex);
+				return false;
 			}
+		}
 
-			byte[] plain = Encoding.UTF8.GetBytes(apiKey);
-			byte[] encrypted = ProtectedData.Protect(plain, optionalEntropy: null, scope: DataProtectionScope.CurrentUser);
-			string base64 = Convert.ToBase64String(encrypted);
+		public static async Task<bool> SaveOpenAIConfigAsync(string apiKey, string preferredModel)
+		{
+			return await SaveConfigAsync(apiKey, preferredModel, "openai");
+		}
 
-			ConfigModel config = new ConfigModel
+		public static async Task<bool> SaveOllamaConfigAsync(string preferredModel)
+		{
+			return await SaveConfigAsync(null, preferredModel, "ollama");
+		}
+
+		private static async Task<bool> SaveConfigAsync(string? apiKey, string preferredModel, string provider)
+		{
+			try
 			{
-				EncryptedOpenAIApiKeyBase64 = base64,
-				PreferredModel = preferredModel
-			};
+				ConfigModel config = new ConfigModel
+				{
+					EncryptedOpenAIApiKeyBase64 = apiKey == null ? null : Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(apiKey), null, DataProtectionScope.CurrentUser)),
+					PreferredModel = preferredModel,
+					Provider = provider
+				};
 
-			JsonSerializerOptions options = new JsonSerializerOptions
-			{
-				WriteIndented = true
-			};
+				string directory = GetAppDirectory();
+				if (!Directory.Exists(directory))
+				{
+					Directory.CreateDirectory(directory);
+				}
 
-			string configPath = GetConfigPath();
-			await using FileStream stream = File.Create(configPath);
-			await JsonSerializer.SerializeAsync(stream, config, options);
-			return true;
-		}
-		catch (Exception ex)
-		{
-			Logger.LogError("Failed to save OpenAI configuration", ex);
-			return false;
-		}
-	}
+				JsonSerializerOptions options = new JsonSerializerOptions
+				{
+					WriteIndented = true
+				};
 
-	public static async Task<string?> GetPreferredModelAsync()
-	{
-		try
-		{
-			ConfigModel? config = await GetConfigAsync();
-			return config?.PreferredModel ?? "gpt-4o-mini"; // Default model
-		}
-		catch (Exception ex)
-		{
-			Logger.LogError("Failed to read preferred model", ex);
-			return "gpt-4o-mini"; // Default model
-		}
-	}
-
-	public static async Task<bool> SavePreferredModelAsync(string preferredModel)
-	{
-		try
-		{
-			ConfigModel config = await GetConfigAsync() ?? new ConfigModel();
-			config.PreferredModel = preferredModel;
-
-			string directory = GetAppDirectory();
-			if (!Directory.Exists(directory))
-			{
-				Directory.CreateDirectory(directory);
+				string configPath = GetConfigPath();
+				await using FileStream stream = File.Create(configPath);
+				await JsonSerializer.SerializeAsync(stream, config, options);
+				return true;
 			}
-
-			JsonSerializerOptions options = new JsonSerializerOptions
+			catch (Exception ex)
 			{
-				WriteIndented = true
-			};
-
-			string configPath = GetConfigPath();
-			await using FileStream stream = File.Create(configPath);
-			await JsonSerializer.SerializeAsync(stream, config, options);
-			return true;
+				Logger.LogError("Failed to save configuration", ex);
+				return false;
+			}
 		}
-		catch (Exception ex)
-		{
-			Logger.LogError("Failed to save preferred model", ex);
-			return false;
-		}
-	}
 
-	private static async Task<ConfigModel?> GetConfigAsync()
-	{
-		try
+		public static async Task<string?> GetPreferredModelAsync()
 		{
-			string configPath = GetConfigPath();
-			if (!File.Exists(configPath))
+			try
 			{
+				ConfigModel? config = await GetConfigAsync();
+				return config?.PreferredModel ?? "gpt-4o-mini"; // Default model
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("Failed to read preferred model", ex);
+				return "gpt-4o-mini"; // Default model
+			}
+		}
+
+		public static async Task<string?> GetProviderAsync()
+		{
+			try
+			{
+				ConfigModel? config = await GetConfigAsync();
+				return config?.Provider ?? "openai";
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("Failed to read provider", ex);
+				return "openai";
+			}
+		}
+
+		public static async Task<bool> SavePreferredModelAsync(string preferredModel)
+		{
+			try
+			{
+				ConfigModel config = await GetConfigAsync() ?? new ConfigModel();
+				config.PreferredModel = preferredModel;
+
+				string directory = GetAppDirectory();
+				if (!Directory.Exists(directory))
+				{
+					Directory.CreateDirectory(directory);
+				}
+
+				JsonSerializerOptions options = new JsonSerializerOptions
+				{
+					WriteIndented = true
+				};
+
+				string configPath = GetConfigPath();
+				await using FileStream stream = File.Create(configPath);
+				await JsonSerializer.SerializeAsync(stream, config, options);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("Failed to save preferred model", ex);
+				return false;
+			}
+		}
+
+		private static async Task<ConfigModel?> GetConfigAsync()
+		{
+			try
+			{
+				string configPath = GetConfigPath();
+				if (!File.Exists(configPath))
+				{
+					return null;
+				}
+
+				await using FileStream stream = File.OpenRead(configPath);
+				ConfigModel? config = await JsonSerializer.DeserializeAsync<ConfigModel>(stream);
+				return config;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("Failed to read configuration", ex);
 				return null;
 			}
-
-			await using FileStream stream = File.OpenRead(configPath);
-			ConfigModel? config = await JsonSerializer.DeserializeAsync<ConfigModel>(stream);
-			return config;
 		}
-		catch (Exception ex)
-		{
-			Logger.LogError("Failed to read configuration", ex);
-			return null;
-		}
-	}
 
 		private static string GetAppDirectory()
 		{
@@ -196,5 +218,3 @@ namespace TypeMate
 		}
 	}
 }
-
-
