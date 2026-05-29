@@ -104,7 +104,9 @@ namespace TypeMate
 		private bool IsOllamaModel(string? model)
 		{
 			return string.Equals(model, "nemotron-3-nano:4b", StringComparison.OrdinalIgnoreCase) ||
-			       string.Equals(model, "gemma4:latest", StringComparison.OrdinalIgnoreCase);
+			       string.Equals(model, "gemma4:latest", StringComparison.OrdinalIgnoreCase) ||
+			       string.Equals(model, "qwen3.5:0.8b", StringComparison.OrdinalIgnoreCase) ||
+			       string.Equals(model, "translategemma:4b", StringComparison.OrdinalIgnoreCase);
 		}
 
 		private async void Save_Click(object sender, RoutedEventArgs e)

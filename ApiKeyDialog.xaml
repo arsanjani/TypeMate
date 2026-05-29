@@ -306,9 +306,11 @@
                                    FontWeight="SemiBold"
                                    Foreground="{StaticResource TextSecondary}"
                                    Margin="14,4,0,0"/>
-                        <ComboBoxItem Content="nemotron-3-nano:4b"/>
-                        <ComboBoxItem Content="gemma4:latest"/>
-                    </ComboBox>
+                         <ComboBoxItem Content="nemotron-3-nano:4b"/>
+                         <ComboBoxItem Content="gemma4:latest"/>
+                         <ComboBoxItem Content="qwen3.5:0.8b"/>
+                         <ComboBoxItem Content="translategemma:4b"/>
+                     </ComboBox>
                     <TextBlock x:Name="ModelHelperText"
                                Text="Select the model to use for text processing" 
                                FontFamily="Segoe UI" 
