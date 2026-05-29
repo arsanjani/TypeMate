@@ -9,6 +9,8 @@
 - **Text Capture**: Automatically copies selected text using simulated `Ctrl+C`
 - **Popup Editor**: Shows a popup window where you can edit the captured text
 - **AI Text Rewriting**: Uses OpenAI to rewrite captured text with a selection of styles (EasyRead, Witty, Formal, Summarise, Expand, LinkedInPost). Requires an OpenAI API key configured in the app.
+- **Ollama Model Support**: Rewrite text using local Ollama models - select from available models with names and descriptions
+- **English to Farsi Translation**: Translate captured text to Farsi using translate-gemma:4b (recommended model for best results)
 - **Text Insertion**: Click "Insert" to paste the modified text back to the original application
 
 ## How to Use
