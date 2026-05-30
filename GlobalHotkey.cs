@@ -114,9 +114,10 @@ namespace TypeMate
             }
         }
         
-        public static bool TryRegisterAlternativeHotkey(System.Windows.Window window, out GlobalHotkey? hotkey)
+        public static bool TryRegisterAlternativeHotkey(System.Windows.Window window, out GlobalHotkey? hotkey, out string? registeredHotkeyName)
         {
             hotkey = null;
+            registeredHotkeyName = null;
             
             // Try alternative hotkey combinations if Ctrl+Alt+R fails
             var alternatives = new[]
@@ -135,6 +136,7 @@ namespace TypeMate
                 {
                     Logger.LogInfo($"Successfully registered alternative hotkey: {alt.Name}");
                     hotkey = tempHotkey;
+                    registeredHotkeyName = alt.Name;
                     return true;
                 }
                 tempHotkey.Dispose();

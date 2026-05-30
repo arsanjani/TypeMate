@@ -108,13 +108,12 @@ namespace TypeMate
                     _globalHotkey.Dispose();
                     
                     // Try alternative hotkey combinations
-                    if (GlobalHotkey.TryRegisterAlternativeHotkey(MainWindow!, out _globalHotkey))
+                    if (GlobalHotkey.TryRegisterAlternativeHotkey(MainWindow!, out _globalHotkey, out string? activeHotkey))
                     {
                         _globalHotkey!.HotkeyPressed += OnHotkeyPressed;
                         Logger.LogInfo("Alternative hotkey registered successfully");
                         ShowWarning("Hotkey Registration", 
-                            "Ctrl+Alt+R was not available, but an alternative hotkey was registered. " +
-                            "Check the application logs for details on which hotkey is active.");
+                            $"Ctrl+Alt+R was not available. The active hotkey is: {activeHotkey}");
                     }
                     else
                     {
