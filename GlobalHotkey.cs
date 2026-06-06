@@ -139,12 +139,13 @@ namespace TypeMate
                     Logger.LogInfo($"Successfully registered alternative hotkey: {alt.Name}");
                     hotkey = tempHotkey;
                     registeredHotkeyName = alt.Name;
+                    RegisteredName = alt.Name;
                     return true;
                 }
                 tempHotkey.Dispose();
             }
             
-            // Revert if all alternatives fail
+            // Reset RegisteredName if all alternatives fail
             RegisteredName = null;
             
             Logger.LogError("All alternative hotkey combinations failed");

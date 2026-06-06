@@ -7,12 +7,12 @@ namespace TypeMate
 {
     public partial class AboutDialog : Window
     {
-        public AboutDialog()
+        public AboutDialog(string? hotkeyName = null)
         {
             InitializeComponent();
             Loaded += (s, e) =>
             {
-                var hk = GlobalHotkey.RegisteredName ?? "Not set";
+                var hk = hotkeyName ?? GlobalHotkey.RegisteredName ?? "Not set";
                 HotkeyTextBlock.Inlines.Clear();
                 HotkeyTextBlock.Inlines.Add(new Run(hk) { FontWeight = FontWeights.SemiBold });
                 HotkeyTextBlock.Inlines.Add(new Run("\r\n") { Foreground = (System.Windows.Media.Brush)FindResource("SubtitleBrush") });

@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Diagnostics;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace TypeMate
 {
@@ -165,16 +166,40 @@ namespace TypeMate
             }
         }
 
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
         private void ShowAboutMessage()
         {
             try
             {
-                System.Windows.Application.Current.Dispatcher.BeginInvoke(() =>
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     try
                     {
-                        var aboutDialog = new AboutDialog();
+                        // Hide any open popup windows so About appears on top
+                        foreach (System.Windows.Window w in System.Windows.Application.Current.Windows)
+                        {
+                            if (w is PopupWindow && w.IsVisible)
+                            {
+                                w.Visibility = System.Windows.Visibility.Collapsed;
+                            }
+                        }
+
+                        var hk = GlobalHotkey.RegisteredName ?? "Ctrl+Alt+R";
+                        var aboutDialog = new AboutDialog(hk)
+                        {
+                            Owner = System.Windows.Application.Current.MainWindow,
+                            Topmost = true
+                        };
                         aboutDialog.Show();
+
+                        IntPtr handle = new System.Windows.Interop.WindowInteropHelper(aboutDialog).Handle;
+                        if (handle != IntPtr.Zero)
+                        {
+                            SetForegroundWindow(handle);
+                            aboutDialog.Activate();
+                        }
                     }
                     catch (Exception ex)
                     {
