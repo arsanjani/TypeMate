@@ -2,151 +2,141 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="About TypeMate"
-        Width="500" Height="420"
+        Width="500" Height="400"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanResize"
+        ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
-        Background="#FAFAFA"
-        MinWidth="500" MinHeight="420">
-    
-    <Window.Resources>
-        <!-- MUI Material Design Colors -->
-        <SolidColorBrush x:Key="PrimaryMain" Color="#1976D2"/>
-        <SolidColorBrush x:Key="TextPrimary" Color="#212121"/>
-        <SolidColorBrush x:Key="TextSecondary" Color="#757575"/>
-        <SolidColorBrush x:Key="Surface" Color="White"/>
-        <SolidColorBrush x:Key="DividerColor" Color="#E0E0E0"/>
-        
-        <!-- MUI Button Style -->
-        <Style x:Key="ContainedButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource PrimaryMain}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="MinWidth" Value="64"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder" 
-                                Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#1565C0"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#BDBDBD"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        Background="Transparent"
+        AllowsTransparency="True">
 
-        <!-- Hyperlink Style -->
-        <Style x:Key="HyperlinkStyle" TargetType="Hyperlink">
-            <Setter Property="Foreground" Value="{StaticResource PrimaryMain}"/>
-            <Setter Property="TextDecorations" Value="None"/>
+    <Window.Resources>
+        <Style x:Key="HyperlinkStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="TextDecorations" Value="Underline"/>
-                    <Setter Property="Foreground" Value="#1565C0"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
     </Window.Resources>
 
-    <!-- Main Content -->
-    <Border Background="{StaticResource Surface}" CornerRadius="8" Margin="0">
+    <Border Background="{DynamicResource GlassBrush}" 
+            BorderBrush="{DynamicResource GlassBorderBrush}" 
+            BorderThickness="1" 
+            CornerRadius="16"
+            Padding="32">
         <Border.Effect>
-            <DropShadowEffect Color="Black" 
-                              Opacity="0.1" 
-                              ShadowDepth="8" 
-                              BlurRadius="16"/>
+            <DropShadowEffect Color="Black" Opacity="0.15" ShadowDepth="0" BlurRadius="40"/>
         </Border.Effect>
-        
-        <Grid Margin="24">
+
+        <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="280"/>
+                <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,16">
-                <TextBlock Text="TypeMate" 
-                           FontFamily="Segoe UI"
-                           FontSize="24" 
-                           FontWeight="Medium" 
-                           Foreground="{StaticResource TextPrimary}"
-                           Margin="0,0,0,4"/>
-                <TextBlock Text="AI-powered writing companion" 
-                           FontFamily="Segoe UI"
-                           FontSize="14" 
-                           Foreground="{StaticResource TextSecondary}"/>
+            <!-- Header with Icon -->
+            <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,24">
+                <Border Background="{DynamicResource PrimaryBrush}" 
+                        CornerRadius="20" Padding="20" Margin="0,0,0,16">
+                    <TextBlock Text="TM" FontSize="32" FontWeight="Bold" 
+                               Foreground="White" HorizontalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="TypeMate" FontSize="28" FontWeight="Bold" 
+                           Foreground="{DynamicResource TitleBrush}" HorizontalAlignment="Center"/>
+                <TextBlock Text="AI-Powered Writing Companion" FontSize="14" 
+                           Foreground="{DynamicResource SubtitleBrush}" 
+                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
             </StackPanel>
-
-            <!-- Divider -->
-            <Rectangle Grid.Row="1" 
-                       Height="1" 
-                       Fill="{StaticResource DividerColor}" 
-                       Margin="0,0,0,20"/>
 
             <!-- Content -->
-            <StackPanel Grid.Row="2" Margin="0,0,0,24">
-                <TextBlock FontFamily="Segoe UI"
-                           FontSize="14"
-                           Foreground="{StaticResource TextPrimary}"
-                           LineHeight="22"
-                           Margin="0,0,0,16"
-                           TextWrapping="Wrap">
-                    <Run Text="• Press Ctrl+Alt+R to capture selected text and open the editor"/>
-                    <LineBreak/>
-                    <Run Text="• Click the tray icon to open the Freestyle Editor"/>
-                </TextBlock>
+            <StackPanel Grid.Row="1">
+                <!-- Version -->
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="📦" FontSize="20" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                            <TextBlock Text="Version" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource SubtitleBrush}"/>
+                            <TextBlock Text="1.0.0" FontSize="14" 
+                                       Foreground="{DynamicResource TitleBrush}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
 
-                <TextBlock FontFamily="Segoe UI"
-                           FontSize="14"
-                           Foreground="{StaticResource TextPrimary}"
-                           TextWrapping="Wrap">
-                    <Run Text="Visit us on GitHub: "/>
-                    <Hyperlink x:Name="GitHubLink"
-                               Style="{StaticResource HyperlinkStyle}"
-                               Click="GitHubLink_Click"
-                               NavigateUri="https://github.com/arsanjani/TypeMate"
-                               TargetName="_blank">
-                        <Run Text="github.com/arsanjani/TypeMate"/>
-                    </Hyperlink>
-                </TextBlock>
+                <!-- Shortcuts -->
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="⌨️" FontSize="20" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                            <TextBlock Text="Keyboard Shortcuts" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource SubtitleBrush}"/>
+                            <TextBlock FontSize="13" Foreground="{DynamicResource TitleBrush}" Margin="0,4,0,0">
+                                <Run Text="Ctrl+Alt+R&#xD;&#xA;"/>
+                                <Run Foreground="{DynamicResource SubtitleBrush}" Text="Capture"/>
+                            </TextBlock>
+                            <TextBlock FontSize="13" Foreground="{DynamicResource TitleBrush}">
+                                <Run Text="Click Tray Icon&#xD;&#xA;"/>
+                                <Run Foreground="{DynamicResource SubtitleBrush}" Text="Freestyle Editor"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Border>
 
-                <TextBlock FontFamily="Segoe UI"
-                           FontSize="12"
-                           Foreground="{StaticResource TextSecondary}"
-                           Margin="0,8,0,0"
-                           TextWrapping="Wrap">
-                    <Run Text="Click the link above to visit our GitHub repository for source code, issues, and updates."/>
-                </TextBlock>
+                <!-- GitHub -->
+                <Border Background="{DynamicResource CardBrush}" CornerRadius="12" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="🌐" FontSize="20" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                            <TextBlock Text="Open Source" FontSize="11" FontWeight="SemiBold" 
+                                       Foreground="{DynamicResource SubtitleBrush}"/>
+                            <TextBlock FontSize="13" Foreground="{DynamicResource SubtitleBrush}" Margin="0,2,0,0">
+                                <Run Text="Visit us on GitHub: "/>
+                                <Hyperlink x:Name="GitHubLink" Click="GitHubLink_Click" 
+                                           NavigateUri="https://github.com/arsanjani/TypeMate">
+                                    github.com/arsanjani/TypeMate
+                                </Hyperlink>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </StackPanel>
 
-            <!-- Actions -->
-            <StackPanel Grid.Row="3" 
-                        Orientation="Horizontal" 
-                        HorizontalAlignment="Right">
-                <Button Content="Close" 
-                        Style="{StaticResource ContainedButton}" 
-                        Click="Close_Click"/>
-            </StackPanel>
+            <!-- Close Button -->
+            <Button Grid.Row="2" Content="Close" Margin="0,24,0,0"
+                    Background="{DynamicResource PrimaryBrush}" Foreground="White"
+                    BorderThickness="0" Padding="32,10" FontSize="14" FontWeight="SemiBold"
+                    Cursor="Hand" Click="Close_Click" HorizontalAlignment="Stretch">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder" Background="{TemplateBinding Background}" 
+                                CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
         </Grid>
     </Border>
 </Window>

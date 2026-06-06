@@ -1,336 +1,279 @@
 <Window x:Class="TypeMate.ApiKeyDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="AI Configuration" Width="400" Height="420"
+        Title="AI Configuration" Width="540" Height="620"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
-        Background="#FAFAFA">
-    <Window.Resources>
-        <!-- MUI Material Design Colors and Theme -->
-        <SolidColorBrush x:Key="PrimaryMain" Color="#1976D2"/>
-        <SolidColorBrush x:Key="PrimaryHover" Color="#1565C0"/>
-        <SolidColorBrush x:Key="TextPrimary" Color="#212121"/>
-        <SolidColorBrush x:Key="TextSecondary" Color="#757575"/>
-        <SolidColorBrush x:Key="DividerColor" Color="#E0E0E0"/>
-        <SolidColorBrush x:Key="Surface" Color="White"/>
-        <SolidColorBrush x:Key="OnSurface" Color="#424242"/>
-        <SolidColorBrush x:Key="Outline" Color="#C4C7C5"/>
-        
-        <!-- MUI TextField Style -->
-        <Style x:Key="OutlinedTextBox" TargetType="TextBox">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Outline}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Border" 
-                                Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="4">
-                            <ScrollViewer x:Name="PART_ContentHost" 
-                                          Margin="{TemplateBinding Padding}" 
-                                          VerticalAlignment="Stretch"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource TextPrimary}"/>
-                            </Trigger>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryMain}"/>
-                                <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True">
 
-        <!-- MUI PasswordBox Style -->
-        <Style x:Key="OutlinedPasswordBox" TargetType="PasswordBox">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Outline}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="PasswordBox">
-                        <Border x:Name="Border" 
-                                Background="{TemplateBinding Background}" 
-                                BorderBrush="{TemplateBinding BorderBrush}" 
-                                BorderThickness="{TemplateBinding BorderThickness}" 
-                                CornerRadius="4">
-                            <ScrollViewer x:Name="PART_ContentHost" 
-                                          Margin="{TemplateBinding Padding}" 
-                                          VerticalAlignment="Stretch"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource TextPrimary}"/>
-                            </Trigger>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryMain}"/>
-                                <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+    <Window.RenderTransform>
+        <TranslateTransform x:Name="DialogTranslate"/>
+    </Window.RenderTransform>
+    <Window.Opacity>0</Window.Opacity>
 
-        <!-- MUI ComboBox Style -->
-        <Style x:Key="OutlinedComboBox" TargetType="ComboBox">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{StaticResource Outline}"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ComboBox">
-                        <Grid>
-                            <Border x:Name="Border" 
-                                    Background="{TemplateBinding Background}" 
-                                    BorderBrush="{TemplateBinding BorderBrush}" 
-                                    BorderThickness="{TemplateBinding BorderThickness}" 
-                                    CornerRadius="4">
-                                <Grid>
-                                    <ContentPresenter x:Name="PART_ContentHost" 
-                                                      Margin="{TemplateBinding Padding}" 
-                                                      VerticalAlignment="Center"
-                                                      Content="{TemplateBinding SelectionBoxItem}"/>
-                                    <ToggleButton x:Name="DropDownToggle" 
-                                                  Grid.Column="1" 
-                                                  Focusable="False" 
-                                                  IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
-                                                  ClickMode="Press"
-                                                  Background="Transparent"
-                                                  BorderThickness="0"
-                                                  HorizontalAlignment="Right"
-                                                  Width="30">
-                                        <Path Data="M7 10l5 5 5-5z" Fill="{StaticResource TextSecondary}" 
-                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </ToggleButton>
-                                </Grid>
-                            </Border>
-                            <Popup x:Name="PART_Popup" 
-                                   Placement="Bottom" 
-                                   IsOpen="{TemplateBinding IsDropDownOpen}" 
-                                   AllowsTransparency="True" 
-                                   Focusable="False" 
-                                   PopupAnimation="Slide">
-                                <Border Background="White" 
-                                        BorderBrush="{StaticResource Outline}" 
-                                        BorderThickness="1" 
-                                        CornerRadius="4">
-                                    <Border.Effect>
-                                        <DropShadowEffect Color="Black" 
-                                                          Opacity="0.1" 
-                                                          BlurRadius="8" 
-                                                          ShadowDepth="2" 
-                                                          Direction="270"/>
-                                    </Border.Effect>
-                                    <ScrollViewer x:Name="DropDownScrollViewer">
-                                        <ItemsPresenter x:Name="ItemsPresenter" 
-                                                        KeyboardNavigation.DirectionalNavigation="Contained"/>
-                                    </ScrollViewer>
-                                </Border>
-                            </Popup>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource TextPrimary}"/>
-                            </Trigger>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryMain}"/>
-                                <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <!-- MUI Contained Button -->
-        <Style x:Key="ContainedButton" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource PrimaryMain}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="MinWidth" Value="64"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder" 
-                                Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource PrimaryHover}"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#BDBDBD"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <!-- MUI Text Button -->
-        <Style x:Key="TextButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource PrimaryMain}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="MinWidth" Value="64"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder" 
-                                Background="{TemplateBinding Background}" 
-                                CornerRadius="4" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#E3F2FD"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
+    <!-- Main Glassmorphic Container -->
+    <Border Background="#FFFFFFF0" 
+            CornerRadius="20" 
+            Margin="16"
+            BorderThickness="1">
+        <Border.BorderBrush>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="#FFFFFF"/>
+                <GradientStop Offset="0.5" Color="#6366F140"/>
+                <GradientStop Offset="1" Color="#06B6D440"/>
+            </LinearGradientBrush>
+        </Border.BorderBrush>
+        <Border.Effect>
+            <DropShadowEffect Color="#6366F1" Opacity="0.2" BlurRadius="50" ShadowDepth="0"/>
+        </Border.Effect>
 
-    <!-- Main Content with MUI Dialog Structure -->
-    <Border Background="{StaticResource Surface}" CornerRadius="8" Margin="0">
-        <Grid Margin="24">
+        <Grid Margin="28">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Dialog Title -->
-            <TextBlock x:Name="DialogTitle"
-                       Text="AI Configuration" 
-                       FontFamily="Segoe UI" 
-                       FontSize="20" 
-                       FontWeight="Medium"
-                       Foreground="{StaticResource TextPrimary}" 
-                       Margin="0,0,0,20"/>
-
-            <!-- Dialog Content -->
-            <StackPanel Grid.Row="1">
-                <!-- Helper Text -->
+            <!-- Header with Icon -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                <!-- Gradient Icon Circle -->
+                <Grid Height="56" Width="56" HorizontalAlignment="Left" Margin="0,0,0,12">
+                    <Ellipse Fill="#F1F5F9" StrokeThickness="2">
+                        <Ellipse.Stroke>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Offset="0" Color="#6366F1"/>
+                                <GradientStop Offset="1" Color="#06B6D4"/>
+                            </LinearGradientBrush>
+                        </Ellipse.Stroke>
+                    </Ellipse>
+                    <TextBlock Text="🔑" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Grid>
+                <TextBlock Text="AI Configuration" 
+                           FontFamily="Segoe UI Variable" 
+                           FontSize="24" 
+                           FontWeight="SemiBold"
+                           Foreground="#0F172A"/>
                 <TextBlock x:Name="HelperText"
-                           Text="Configure your OpenAI API settings. Your credentials are stored securely on this device." 
-                           FontFamily="Segoe UI" 
-                           FontSize="14"
-                           Foreground="{StaticResource TextSecondary}" 
+                           Text="Configure your AI provider settings. Credentials are stored securely." 
+                           FontFamily="Segoe UI Variable" 
+                           FontSize="13"
+                           Foreground="#64748B" 
                            TextWrapping="Wrap"
-                           Margin="0,0,0,8"/>
-
-                <!-- Ollama Info Text (hidden by default) -->
-                <TextBlock x:Name="OllamaInfoText"
-                           Text="These models run locally via Ollama (localhost:11434). No API key required." 
-                           FontFamily="Segoe UI" 
-                           FontSize="12"
-                           Foreground="#388E3C" 
-                           TextWrapping="Wrap"
-                           Visibility="Hidden"
-                           Margin="0,0,0,8"/>
-
-                <!-- API Key Field -->
-                <StackPanel x:Name="ApiKeyPanel" Margin="0,0,0,16">
-                    <TextBlock Text="API Key *" 
-                               FontFamily="Segoe UI" 
-                               FontSize="12" 
-                               FontWeight="Medium"
-                               Foreground="{StaticResource OnSurface}" 
-                               Margin="0,0,0,6"/>
-                    <PasswordBox x:Name="ApiKeyBox" 
-                                 Style="{StaticResource OutlinedPasswordBox}" 
-                                 FontSize="14"/>
-                </StackPanel>
-
-                <!-- Model Selection Field -->
-                <StackPanel Margin="0,0,0,0">
-                    <TextBlock Text="Model" 
-                               FontFamily="Segoe UI" 
-                               FontSize="12" 
-                               FontWeight="Medium"
-                               Foreground="{StaticResource OnSurface}" 
-                               Margin="0,0,0,6"/>
-                    <ComboBox x:Name="ModelComboBox" 
-                              Style="{StaticResource OutlinedComboBox}"
-                              SelectionChanged="ModelComboBox_SelectionChanged">
-                        <!-- OpenAI Models -->
-                        <ComboBoxItem Content="gpt-4o-mini"/>
-                        <ComboBoxItem Content="gpt-4o"/>
-                        <ComboBoxItem Content="gpt-4-turbo"/>
-                        <ComboBoxItem Content="gpt-3.5-turbo"/>
-                        <ComboBoxItem Content="o1-mini"/>
-                        <ComboBoxItem Content="o1-preview"/>
-                        <!-- Ollama Models -->
-                        <Separator/>
-                        <TextBlock Text="── Ollama Models ──" 
-                                   FontSize="11" 
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextSecondary}"
-                                   Margin="14,4,0,0"/>
-                         <ComboBoxItem Content="nemotron-3-nano:4b"/>
-                         <ComboBoxItem Content="gemma4:latest"/>
-                         <ComboBoxItem Content="qwen3.5:0.8b"/>
-                         <ComboBoxItem Content="translategemma:4b"/>
-                     </ComboBox>
-                    <TextBlock x:Name="ModelHelperText"
-                               Text="Select the model to use for text processing" 
-                               FontFamily="Segoe UI" 
-                               FontSize="11" 
-                               Foreground="{StaticResource TextSecondary}" 
-                               Margin="0,4,0,0"/>
-                </StackPanel>
+                           Margin="0,4,0,0"/>
             </StackPanel>
 
-            <!-- Dialog Actions -->
-            <StackPanel Grid.Row="2" 
-                        Orientation="Horizontal" 
-                        HorizontalAlignment="Right" 
-                        Margin="0,24,0,0">
-                <Button Content="Cancel" 
-                        Style="{StaticResource TextButton}" 
-                        Click="Cancel_Click" 
+            <!-- Content - No scroll -->
+            <StackPanel Grid.Row="1">
+                    <!-- Ollama Info Banner -->
+                    <Border x:Name="OllamaBanner"
+                            Visibility="Hidden"
+                            Background="#DCFCE760" 
+                            CornerRadius="10" 
+                            Padding="14,12" 
+                            Margin="0,0,0,14"
+                            BorderThickness="1"
+                            BorderBrush="#86EFAC80">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="✅ " FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Text="Ollama detected — local AI models available (no API key needed)" 
+                                       FontFamily="Segoe UI Variable" 
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#166534" 
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Security Notice -->
+                    <Border Background="#EEF2FF80"
+                            CornerRadius="10"
+                            Padding="14,12"
+                            Margin="0,0,0,16"
+                            BorderThickness="1"
+                            BorderBrush="#A5B4FC80">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔒 " FontSize="14" VerticalAlignment="Center"/>
+                            <TextBlock Text="Your API key is encrypted and stored only on this device."
+                                       FontFamily="Segoe UI Variable"
+                                       FontSize="12"
+                                       Foreground="#4338CA"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- API Key Field -->
+                    <StackPanel x:Name="ApiKeyPanel" Margin="0,0,0,16">
+                        <TextBlock Style="{StaticResource InputLabel}">
+                            <Run Text="🔐 "/>
+                            <Run Text="API Key"/>
+                        </TextBlock>
+                        <PasswordBox x:Name="ApiKeyBox" 
+                                     Height="48"
+                                     Padding="16,12"
+                                     FontFamily="Segoe UI Variable"
+                                     FontSize="14"
+                                     BorderThickness="1.5"
+                                     BorderBrush="#E2E8F0"
+                                     Background="#FFFFFFF0"
+                                     Foreground="#0F172A"
+                                     PasswordChar="●">
+                            <PasswordBox.Style>
+                                <Style TargetType="PasswordBox">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="PasswordBox">
+                                                <Border x:Name="Border" 
+                                                        Background="{TemplateBinding Background}" 
+                                                        BorderBrush="{TemplateBinding BorderBrush}" 
+                                                        BorderThickness="{TemplateBinding BorderThickness}" 
+                                                        CornerRadius="12">
+                                                    <ScrollViewer x:Name="PART_ContentHost" 
+                                                                  Margin="{TemplateBinding Padding}" 
+                                                                  VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Border" Property="BorderBrush" Value="#94A3B8"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsFocused" Value="True">
+                                                        <Setter TargetName="Border" Property="BorderBrush" Value="#6366F1"/>
+                                                        <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </PasswordBox.Style>
+                        </PasswordBox>
+                    </StackPanel>
+
+                    <!-- Model Selection -->
+                    <StackPanel Margin="0,0,0,0">
+                        <TextBlock Style="{StaticResource InputLabel}">
+                            <Run Text="🤖 "/>
+                            <Run Text="AI Model"/>
+                        </TextBlock>
+                        <ComboBox x:Name="ModelComboBox" 
+                                  Height="48"
+                                  Padding="16,8"
+                                  FontFamily="Segoe UI Variable"
+                                  FontSize="14"
+                                  BorderThickness="1.5"
+                                  BorderBrush="#E2E8F0"
+                                  Background="#FFFFFFF0"
+                                  Foreground="#0F172A"
+                                  SelectionChanged="ModelComboBox_SelectionChanged">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ComboBox">
+                                                <Grid>
+                                                    <Border x:Name="Border" 
+                                                            Background="{TemplateBinding Background}" 
+                                                            BorderBrush="{TemplateBinding BorderBrush}" 
+                                                            BorderThickness="{TemplateBinding BorderThickness}" 
+                                                            CornerRadius="12">
+                                                        <Grid>
+                                                        <ContentPresenter x:Name="PART_ContentHost"
+                                                                          Content="{TemplateBinding SelectionBoxItem}"
+                                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                                          Margin="{TemplateBinding Padding}"
+                                                                          VerticalAlignment="Center"/>
+                                                            <ToggleButton x:Name="DropDownToggle" 
+                                                                          Focusable="False" 
+                                                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
+                                                                          ClickMode="Press"
+                                                                          Background="Transparent"
+                                                                          BorderThickness="0"
+                                                                          HorizontalAlignment="Right"
+                                                                          Width="36">
+                                                                <Path Data="M7 10l5 5 5-5z" Fill="#6366F1" 
+                                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            </ToggleButton>
+                                                        </Grid>
+                                                    </Border>
+                                                    <Popup x:Name="PART_Popup" 
+                                                           Placement="Bottom" 
+                                                           IsOpen="{TemplateBinding IsDropDownOpen}" 
+                                                           AllowsTransparency="True" 
+                                                           Focusable="False" 
+                                                           PopupAnimation="Slide">
+                                                        <Border Background="#FFFFFFF0" 
+                                                                BorderBrush="#E2E8F0" 
+                                                                BorderThickness="1" 
+                                                                CornerRadius="12"
+                                                                Margin="0,4,0,0">
+                                                            <Border.Effect>
+                                                                <DropShadowEffect Color="#6366F1" Opacity="0.1" BlurRadius="20" ShadowDepth="4"/>
+                                                            </Border.Effect>
+                                                            <ScrollViewer x:Name="DropDownScrollViewer">
+                                                                <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                                            </ScrollViewer>
+                                                        </Border>
+                                                    </Popup>
+                                                </Grid>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Border" Property="BorderBrush" Value="#94A3B8"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsFocused" Value="True">
+                                                        <Setter TargetName="Border" Property="BorderBrush" Value="#6366F1"/>
+                                                        <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ComboBox.Style>
+                            <!-- OpenAI Models Group -->
+                            <ComboBoxItem IsEnabled="False" FontWeight="Bold" Foreground="#6366F1">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⚡ " FontSize="12"/>
+                                    <TextBlock Text="OpenAI Models"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="gpt-4o-mini"/>
+                            <ComboBoxItem Content="gpt-4o"/>
+                            <ComboBoxItem Content="gpt-4-turbo"/>
+                            <ComboBoxItem Content="gpt-3.5-turbo"/>
+                            <ComboBoxItem Content="o1-mini"/>
+                            <ComboBoxItem Content="o1-preview"/>
+                            <!-- Ollama Models Group -->
+                            <ComboBoxItem IsEnabled="False" FontWeight="Bold" Foreground="#06B6D4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🏠 " FontSize="12"/>
+                                    <TextBlock Text="Ollama (Local)"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="nemotron-3-nano:4b"/>
+                            <ComboBoxItem Content="gemma4:latest"/>
+                            <ComboBoxItem Content="qwen3.5:0.8b"/>
+                            <ComboBoxItem Content="translategemma:4b"/>
+                        </ComboBox>
+                        <TextBlock x:Name="ModelHelperText"
+                                   Text="Choose the AI model for text processing" 
+                                   Style="{StaticResource HelperText}" 
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+            <!-- Actions -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                <Button Content="✕  Cancel"
+                        Style="{StaticResource GhostButton}"
+                        Height="38" Padding="16,0"
+                        Click="Cancel_Click"
                         Margin="0,0,8,0"/>
-                <Button Content="Save" 
-                        Style="{StaticResource ContainedButton}" 
+                <Button Content="💾  Save Settings"
+                        Style="{StaticResource PrimaryButton}"
+                        Height="38" Padding="24,0"
                         Click="Save_Click"/>
             </StackPanel>
         </Grid>

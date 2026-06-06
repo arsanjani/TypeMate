@@ -18,6 +18,25 @@ namespace TypeMate
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll")]
+        private static extern bool OpenClipboard(IntPtr hWndOwner);
+
+        [DllImport("user32.dll")]
+        private static extern bool EmptyClipboard();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetClipboardData(uint uFormat);
+
+        [DllImport("user32.dll")]
+        private static extern bool CloseClipboard();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GlobalLock(IntPtr hMem);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GlobalUnlock(IntPtr hMem);
+
+        private const uint CF_UNICODETEXT = 13;
         private const int VK_CONTROL = 0x11;
         private const int VK_C = 0x43;
         private const int VK_V = 0x56;
@@ -236,32 +255,69 @@ namespace TypeMate
 
         public static async Task<bool> SetClipboardText(string text)
         {
-            try
+            const int maxRetries = 10;
+            for (int i = 0; i < maxRetries; i++)
             {
-                return await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                try
                 {
-                    lock (ClipboardLock)
+                    // Try Win32 clipboard API directly - more reliable than WPF Clipboard
+                    for (int attempt = 0; attempt < 5; attempt++)
                     {
-                        try
+                        if (OpenClipboard(IntPtr.Zero))
                         {
-                            System.Windows.Clipboard.SetText(text);
-                            Logger.LogInfo($"Clipboard set with {text.Length} characters");
-                            return true;
+                            try
+                            {
+                                EmptyClipboard();
+                                var bytes = System.Text.Encoding.Unicode.GetBytes(text);
+                                // Allocate global memory (clipboard requires movable global memory)
+                                IntPtr hGlob = GlobalAlloc(0x2, (uint)(bytes.Length + 2));
+                                if (hGlob != IntPtr.Zero)
+                                {
+                                    IntPtr pGlob = GlobalLock(hGlob);
+                                    if (pGlob != IntPtr.Zero)
+                                    {
+                                        Marshal.Copy(bytes, 0, pGlob, bytes.Length);
+                                    }
+                                    GlobalUnlock(hGlob);
+                                    SetClipboardData(CF_UNICODETEXT, hGlob);
+                                }
+                                CloseClipboard();
+                                Logger.LogInfo($"Clipboard set with {text.Length} characters via Win32 API");
+                                return true;
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogWarning($"Win32 clipboard attempt {attempt + 1} failed: {ex.Message}");
+                                try { CloseClipboard(); } catch { }
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError("Error setting clipboard text", ex);
-                            return false;
-                        }
+                        if (attempt < 4) await Task.Delay(200);
                     }
-                });
+
+                    // Fallback to WPF Clipboard
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        System.Windows.Clipboard.SetText(text);
+                    });
+                    Logger.LogInfo($"Clipboard set with {text.Length} characters via WPF fallback");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning($"Clipboard set retry {i + 1} failed: {ex.Message}");
+                    if (i < maxRetries - 1) await Task.Delay(300);
+                }
             }
-            catch (Exception ex)
-            {
-                Logger.LogError("Error dispatching clipboard set operation", ex);
-                return false;
-            }
+
+            Logger.LogError("All clipboard set attempts failed");
+            return false;
         }
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GlobalAlloc(uint uFlags, uint dwBytes);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetClipboardData(uint uFormat, IntPtr hMem);
 
         private static void ShowErrorMessage(string message)
         {

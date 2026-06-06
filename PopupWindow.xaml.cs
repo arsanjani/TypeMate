@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace TypeMate
 {
@@ -11,8 +13,24 @@ namespace TypeMate
         {
             InitializeComponent();
             TextEditor.Text = selectedText;
+            AnimateIn();
             TextEditor.Focus();
             TextEditor.SelectAll();
+        }
+
+        private void AnimateIn()
+        {
+            var fade = new DoubleAnimation { From = 0, To = 1, Duration = TimeSpan.FromSeconds(0.25), DecelerationRatio = 0.8 };
+            BeginAnimation(OpacityProperty, fade);
+            var slide = new DoubleAnimation { From = 30, To = 0, Duration = TimeSpan.FromSeconds(0.25), DecelerationRatio = 0.8 };
+            WindowTranslate.BeginAnimation(TranslateTransform.YProperty, slide);
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            var fadeOut = new DoubleAnimation { To = 0, Duration = TimeSpan.FromSeconds(0.15) };
+            BeginAnimation(OpacityProperty, fadeOut);
+            Task.Delay(150).ContinueWith(_ => Dispatcher.Invoke(() => base.OnClosing(e)));
         }
 
         private void AiButton_Click(object sender, RoutedEventArgs e)
@@ -117,62 +135,29 @@ namespace TypeMate
 
         private async void InsertButton_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
                 string textToInsert = TextEditor.Text;
-                
-                if (string.IsNullOrWhiteSpace(textToInsert))
-                {
-                    Logger.LogWarning("No text to insert - text editor is empty");
-                    return;
-                }
+                if (string.IsNullOrWhiteSpace(textToInsert)) return;
 
                 Logger.LogInfo($"Attempting to insert {textToInsert.Length} characters");
+                SetUiBusy(true);
 
-                // Disable buttons to prevent multiple clicks
-                InsertButton.IsEnabled = false;
-                AiButton.IsEnabled = false;
-                CancelButton.IsEnabled = false;
-
-                // Set clipboard with the modified text
-                bool clipboardSet = await ClipboardManager.SetClipboardText(textToInsert);
-                
-                if (!clipboardSet)
+                // Set clipboard BEFORE closing the window to avoid Application context issues
+                if (!await ClipboardManager.SetClipboardText(textToInsert))
                 {
-                    Logger.LogWarning("Failed to set clipboard text");
-                    System.Windows.MessageBox.Show("Failed to copy text to clipboard. Please try again.", 
+                    System.Windows.MessageBox.Show("Failed to copy text to clipboard. Please try again.",
                         "TypeMate Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    
-                    // Re-enable buttons
-                    InsertButton.IsEnabled = true;
-                    AiButton.IsEnabled = true;
-                    CancelButton.IsEnabled = true;
+                    SetUiBusy(false);
                     return;
                 }
-                
-                // Close popup
+
                 this.Close();
-                
-                // Wait a moment for the popup to close, then paste
-                await Task.Delay(300);
-                
-                bool pasteSuccess = await ClipboardManager.SendCtrlV();
-                if (!pasteSuccess)
+
+                _ = Task.Run(async () =>
                 {
-                    Logger.LogWarning("Failed to send Ctrl+V");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Error in InsertButton_Click", ex);
-                System.Windows.MessageBox.Show("An error occurred while inserting text. Please try again.", 
-                    "TypeMate Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                
-                // Re-enable buttons
-                InsertButton.IsEnabled = true;
-                AiButton.IsEnabled = true;
-                CancelButton.IsEnabled = true;
-            }
+                    await Task.Delay(300);
+                    try { await ClipboardManager.SendCtrlV(); }
+                    catch (Exception ex) { Logger.LogError("Paste failed", ex); }
+                });
         }
 
         private void CancelButton_Click(object sender, RoutedEventArgs e)
@@ -182,13 +167,10 @@ namespace TypeMate
 
         protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)
         {
-            // Handle Escape key to close
-            if (e.Key == System.Windows.Input.Key.Escape)
-            {
-                this.Close();
-                e.Handled = true;
-            }
+            if (e.Key == System.Windows.Input.Key.Escape) { this.Close(); e.Handled = true; }
             base.OnKeyDown(e);
         }
+
+        private void DragWindow(object sender, System.Windows.Input.MouseButtonEventArgs e) => DragMove();
     }
 }

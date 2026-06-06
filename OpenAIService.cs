@@ -35,14 +35,6 @@ namespace TypeMate
 		private const string FallbackModel = "gpt-4o-mini";
 		private const string OllamaEndpoint = "http://localhost:11434/v1/chat/completions";
 
-		private static bool IsOllamaModel(string? model)
-		{
-			if (string.IsNullOrWhiteSpace(model)) return false;
-			
-			string lower = model.ToLowerInvariant();
-			return lower.Contains("nemotron") || lower.Contains("gemma") || lower.Contains("qwen") || lower.Contains("translategemma");
-		}
-
 		private static string BuildSystemPrompt(RewriteStyle style)
 		{
 			switch (style)
@@ -60,8 +52,8 @@ namespace TypeMate
 				case RewriteStyle.LinkedInPost:
 					return "You are a LinkedIn ghostwriter. Rewrite the user's text as a compelling LinkedIn post with a strong hook, clear value, and a call to action. Keep it professional and authentic.";
 				case RewriteStyle.PromptOptimizer:
-					return "You are a senior prompt engineer. Transform the user's input into a concise, high-signal prompt suitable for a code editor agent like Cursor AI.\n\nRequirements:\n- Start with a one-line goal statement (imperative voice).\n- Include only essential context and constraints.\n- List 3-6 high-level steps the agent should take.\n- Specify expected outputs and acceptance criteria.\n- If input includes code, preserve important identifiers and reference them succinctly.\n- Avoid fluff; output only the final optimized prompt ready to paste into Cursor.";
-			case RewriteStyle.EnglishToFarsi:
+					return "You are an expert prompt engineer specializing in software development tasks for AI coding agents (Cursor, Copilot, Claude Code, etc.). Transform the user's input into a precision-engineered prompt using the following structure:\n\n**ROLE**: Assign a specific technical role (e.g., \"Senior React developer\", \"Python backend architect\", \"DevOps engineer\") inferred from the input context.\n\n**OBJECTIVE**: One clear, actionable statement of what to build, fix, or refactor (imperative voice).\n\n**CONTEXT**: Tech stack, frameworks, languages detected. Relevant existing code/architecture references. Environment constraints.\n\n**REQUIREMENTS**: Numbered list of functional must-haves derived from the input.\n\n**CONSTRAINTS**: Performance, security, and style guidelines. Explicitly state what NOT to do. Files or modules to avoid modifying.\n\n**DELIVERABLES**: Exact outputs expected (specific code files, tests, migrations, config changes).\n\n**ACCEPTANCE CRITERIA**: Testable conditions that define \"done\".\n\nRules:\n- Infer tech stack from code snippets, file names, or keywords in the input.\n- Be specific and precise — AI coding agents fail on ambiguity.\n- Include edge cases the solution must handle.\n- If input is vague or underspecified, explicitly state your assumptions.\n- Preserve important identifiers (class names, function names, file paths) from the input.\n- Output ONLY the final optimized prompt. No explanations, no preamble.";
+				case RewriteStyle.EnglishToFarsi:
 					return "You are a professional English (en) to Persian (fa-IR) translator. Your goal is to accurately convey the meaning and nuances of the original English text while adhering to Persian grammar, vocabulary, and cultural sensitivities.\n\nProduce only the Persian translation, without any additional explanations or commentary. Please translate the following English text into the Persian:\n\n";
 				default:
 					return "You are a helpful writing assistant. Improve clarity and impact.";
@@ -84,8 +76,8 @@ namespace TypeMate
 					new { role = "system", content = BuildSystemPrompt(style) },
 					new { role = "user", content = input }
 				},
-				temperature = 0.7,
-				max_tokens = 512
+				temperature = style == RewriteStyle.PromptOptimizer ? 0.3 : 0.7,
+				max_tokens = (style == RewriteStyle.PromptOptimizer) ? 1500 : 512
 			};
 
 			string json = JsonSerializer.Serialize(payload);
@@ -113,49 +105,73 @@ namespace TypeMate
 
 		private static async Task<string?> CallOllamaAsync(string model, RewriteStyle style, string input)
 		{
-			var payload = new
+			bool isSmallModel = model.Contains("0.8b", StringComparison.OrdinalIgnoreCase)
+							 || model.Contains("0.5b", StringComparison.OrdinalIgnoreCase)
+							 || model.Contains("1b", StringComparison.OrdinalIgnoreCase)
+							 || model.Contains("270m", StringComparison.OrdinalIgnoreCase);
+
+			int baseMaxTokens = isSmallModel ? 1024 : (style == RewriteStyle.PromptOptimizer ? 1500 : 512);
+
+			// Try with specified max_tokens first, then retry without limit if content was empty
+			for (int attempt = 0; attempt < 2; attempt++)
 			{
-				model = model,
-				messages = new object[]
+				int maxTokens = attempt == 0 ? baseMaxTokens : 0; // 0 = unlimited in Ollama
+
+				var payload = new
 				{
-					new { role = "system", content = BuildSystemPrompt(style) },
-					new { role = "user", content = input }
-				},
-				temperature = 0.7,
-				stream = false
-			};
+					model = model,
+					messages = new object[]
+					{
+						new { role = "system", content = BuildSystemPrompt(style) },
+						new { role = "user", content = input }
+					},
+					temperature = style == RewriteStyle.PromptOptimizer ? 0.3 : 0.7,
+					stream = false,
+					max_tokens = maxTokens,
+					keep_alive = -1
+				};
 
-			string json = JsonSerializer.Serialize(payload);
-			using StringContent body = new StringContent(json, Encoding.UTF8, "application/json");
+				string json = JsonSerializer.Serialize(payload);
+				using StringContent body = new StringContent(json, Encoding.UTF8, "application/json");
 
-			try
-			{
-				using HttpResponseMessage resp = await OllamaHttp.PostAsync(OllamaEndpoint, body);
-				string respText = await resp.Content.ReadAsStringAsync();
-
-				if (!resp.IsSuccessStatusCode)
+				try
 				{
-					Logger.LogWarning($"Ollama error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
+					using HttpResponseMessage resp = await OllamaHttp.PostAsync(OllamaEndpoint, body);
+					string respText = await resp.Content.ReadAsStringAsync();
+
+					if (!resp.IsSuccessStatusCode)
+					{
+						Logger.LogWarning($"Ollama error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
+						return null;
+					}
+
+					using JsonDocument doc = JsonDocument.Parse(respText);
+					JsonElement root = doc.RootElement;
+					if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
+					{
+						JsonElement first = choices[0];
+						if (first.TryGetProperty("message", out JsonElement message) && message.TryGetProperty("content", out JsonElement content))
+						{
+							string result = content.GetString() ?? "";
+							if (!string.IsNullOrEmpty(result))
+							{
+								return result;
+							}
+							// Empty content - retry with no limit on second attempt
+							Logger.LogInfo($"Ollama ({model}) returned empty content (attempt {attempt + 1}), retrying...");
+						}
+					}
+					continue;
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError($"Ollama connection failed for model {model}", ex);
 					return null;
 				}
+			}
 
-				using JsonDocument doc = JsonDocument.Parse(respText);
-				JsonElement root = doc.RootElement;
-				if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
-				{
-					JsonElement first = choices[0];
-					if (first.TryGetProperty("message", out JsonElement message) && message.TryGetProperty("content", out JsonElement content))
-					{
-						return content.GetString();
-					}
-				}
-				return null;
-			}
-			catch (Exception ex)
-			{
-				Logger.LogError($"Ollama connection failed for model {model}", ex);
-				return null;
-			}
+			Logger.LogWarning($"Ollama ({model}) consistently returned empty response");
+			return null;
 		}
 
 		public static async Task<string?> RewriteAsync(string input, RewriteStyle style)
@@ -166,34 +182,32 @@ namespace TypeMate
 				return null;
 			}
 
-			bool isOllama = IsOllamaModel(userPreferredModel);
-
-			if (isOllama)
+			string? provider = await ApiKeyStore.GetProviderAsync();
+			if (!string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
 			{
-				return await CallOllamaAsync(userPreferredModel, style, input);
-			}
-
-			string? apiKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
-			if (string.IsNullOrWhiteSpace(apiKey))
-			{
-				return null;
-			}
-
-			try
-			{
-				// Try user's preferred model first, then the configured fallback
-				string? result = await CallOpenAIAsync(userPreferredModel, apiKey, style, input);
-				if (string.IsNullOrWhiteSpace(result) && userPreferredModel != FallbackModel)
+				string? apiKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
+				if (string.IsNullOrWhiteSpace(apiKey))
 				{
-					result = await CallOpenAIAsync(FallbackModel, apiKey, style, input);
+					return null;
 				}
-				return result;
+
+				try
+				{
+					string? result = await CallOpenAIAsync(userPreferredModel, apiKey, style, input);
+					if (string.IsNullOrWhiteSpace(result) && userPreferredModel != FallbackModel)
+					{
+						result = await CallOpenAIAsync(FallbackModel, apiKey, style, input);
+					}
+					return result;
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError("OpenAI rewrite failed", ex);
+					return null;
+				}
 			}
-			catch (Exception ex)
-			{
-				Logger.LogError("OpenAI rewrite failed", ex);
-				return null;
-			}
+
+			return await CallOllamaAsync(userPreferredModel, style, input);
 		}
 	}
 }
