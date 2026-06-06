@@ -16,14 +16,10 @@
     </Window.RenderTransform>
     <Window.Opacity>0</Window.Opacity>
 
-    <!-- Main Glassmorphic Container -->
-    <Border Background="#FFFFFFF0" 
-            CornerRadius="16" 
-            Margin="12"
-            BorderThickness="1">
+    <Border Background="#FFFFFFF0" CornerRadius="16" Margin="12" BorderThickness="1">
         <Border.BorderBrush>
             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                <GradientStop Offset="0" Color="#FFFFFF" />
+                <GradientStop Offset="0" Color="#FFFFFF"/>
                 <GradientStop Offset="0.5" Color="#6366F140"/>
                 <GradientStop Offset="1" Color="#06B6D440"/>
             </LinearGradientBrush>
@@ -32,225 +28,113 @@
             <DropShadowEffect Color="#6366F1" Opacity="0.15" BlurRadius="40" ShadowDepth="0"/>
         </Border.Effect>
 
-        <Grid Margin="16">
-            <Grid.RowDefinitions>
-                <!-- Drag handle header -->
-                <RowDefinition Height="Auto"/>
-                <!-- Title area -->
-                <RowDefinition Height="Auto"/>
-                <!-- Divider -->
-                <RowDefinition Height="Auto"/>
-                <!-- Editor -->
-                <RowDefinition Height="*"/>
-                <!-- Bottom bar -->
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+        <Grid x:Name="RootGrid">
+            <!-- Shared content area -->
+            <Grid.RowDefinitions><RowDefinition Height="*"/></Grid.RowDefinitions>
 
-            <!-- Draggable Header Bar -->
-            <Border Grid.Row="0" 
-                    Height="8" 
-                    CornerRadius="4"
-                    MouseLeftButtonDown="DragWindow">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Offset="0" Color="#6366F1"/>
-                        <GradientStop Offset="0.5" Color="#8B5CF6"/>
-                        <GradientStop Offset="1" Color="#06B6D4"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
+            <!-- Content layer -->
+            <Grid x:Name="ContentLayer" Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-            <!-- Header Section -->
-            <StackPanel Grid.Row="1" Margin="4,8,0,12">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <!-- Title -->
-                    <StackPanel Grid.Column="0">
-                        <TextBlock FontFamily="Segoe UI" FontSize="22" FontWeight="SemiBold"
-                                   Foreground="#0F172A">
-                            <Run Text="✏️ "/>
-                            <Run Text="TypeMate Editor"/>
-                        </TextBlock>
-                        <TextBlock FontFamily="Segoe UI" FontSize="12" 
-                                   Foreground="#64748B" Margin="2,2,0,0">
-                            Edit your selected text and insert it back
-                        </TextBlock>
-                    </StackPanel>
-
-                    <!-- Close Button -->
-                    <Button Grid.Column="1" Style="{StaticResource IconButton}" 
-                            Content="✕" FontSize="14" FontWeight="Bold"
-                            Click="CancelButton_Click">
-                        <Button.Resources>
-                            <Style TargetType="Button" BasedOn="{StaticResource IconButton}"/>
-                        </Button.Resources>
-                    </Button>
-                </Grid>
-            </StackPanel>
-
-            <!-- Animated Divider -->
-            <Border Grid.Row="2" Height="1" Margin="0,4,0,12">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                         <GradientStop Offset="0" Color="#806366F1"/>
-                         <GradientStop Offset="0.5" Color="#4D8B5CF6"/>
-                         <GradientStop Offset="1" Color="#8006B6D4"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-            </Border>
-
-            <!-- Text Editor -->
-            <Border Grid.Row="3" 
-                    Background="#FFFFFFF8"
-                    BorderBrush="#E2E8F0" 
-                    BorderThickness="1.5" 
-                    CornerRadius="10"
-                    Margin="0,0,0,16">
-                <Border.Effect>
-                    <DropShadowEffect Color="#0F172A" Opacity="0.04" BlurRadius="8" ShadowDepth="2"/>
-                </Border.Effect>
-                <TextBox x:Name="TextEditor"
-                         TextWrapping="Wrap"
-                         AcceptsReturn="True"
-                         VerticalScrollBarVisibility="Auto"
-                         HorizontalScrollBarVisibility="Disabled"
-                         Padding="16"
-                         FontFamily="Segoe UI Variable"
-                         FontSize="14"
-                         Foreground="#0F172A"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         SelectionBrush="#818CF8"/>
-            </Border>
-
-            <!-- Bottom Action Bar -->
-            <Border Grid.Row="4" 
-                    Background="#F8FAFC80" 
-                    CornerRadius="10" 
-                    Padding="12,10">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- AI Badge -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#94A3B8">
-                            <Run Text="⌨️ "/>
-                            <Run Text="Press Ctrl+Enter to insert"/>
-                        </TextBlock>
-                    </StackPanel>
-
-                    <!-- Action Buttons -->
-                    <StackPanel Grid.Column="1" 
-                                Orientation="Horizontal" 
-                                VerticalAlignment="Center">
-                        
-                        <!-- AI Dropdown Button -->
-                        <Button x:Name="AiButton"
-                                Style="{StaticResource SecondaryButton}"
-                                Height="38"
-                                Padding="14,0"
-                                Margin="0,0,8,0"
-                                Click="AiButton_Click">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="✨" FontSize="14" Margin="0,0,6,0"/>
-                                <TextBlock Text="AI Tools" Style="{StaticResource InputLabel}" Margin="0"/>
-                                <Path Data="M7 10l5 5 5-5z" 
-                                      Fill="#6366F1" 
-                                      Width="8" Height="8"
-                                      Margin="6,0,0,0"
-                                      VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <Button.ContextMenu>
-                                <ContextMenu x:Name="AiContextMenu">
-                                    <MenuItem Header="📖 Easy Read" Click="AiMenu_EasyRead_Click"/>
-                                    <MenuItem Header="😂 Witty" Click="AiMenu_Witty_Click"/>
-                                    <MenuItem Header="🎩 Formal" Click="AiMenu_Formal_Click"/>
-                                    <MenuItem Header="📋 Summarise" Click="AiMenu_Summarise_Click"/>
-                                    <MenuItem Header="📝 Expand" Click="AiMenu_Expand_Click"/>
-                                    <MenuItem Header="💼 LinkedIn Post" Click="AiMenu_LinkedIn_Click"/>
-                                    <MenuItem Header="🌐 English → Farsi" Click="AiMenu_EnglishToFarsi_Click"/>
-                                    <MenuItem Header="🤖 Convert to Prompt" Click="AiMenu_PromptOptimizer_Click"/>
-                                    <Separator/>
-                                    <MenuItem Header="⚙️ Set API Key…" Click="AiMenu_SetApiKey_Click"/>
-                                </ContextMenu>
-                            </Button.ContextMenu>
-                        </Button>
-
-                        <!-- Insert Button -->
-                        <Button x:Name="InsertButton"
-                                Content="✅  Insert"
-                                Style="{StaticResource PrimaryButton}"
-                                Height="38"
-                                Padding="20,0"
-                                Margin="0,0,8,0"
-                                Click="InsertButton_Click"/>
-
-                        <!-- Cancel Button -->
-                        <Button x:Name="CancelButton"
-                                Content="✕  Cancel"
-                                Style="{StaticResource GhostButton}"
-                                Height="38"
-                                Padding="16,0"
-                                Click="CancelButton_Click"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- Loading Overlay -->
-            <Grid x:Name="LoadingOverlay" Visibility="Collapsed">
-                <Border Background="#0F172ACC" CornerRadius="16">
-                    <Border.RenderTransform>
-                        <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
-                    </Border.RenderTransform>
+                <!-- Drag handle -->
+                <Border Grid.Row="0" Height="8" CornerRadius="4" MouseLeftButtonDown="DragWindow">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Offset="0" Color="#6366F1"/>
+                            <GradientStop Offset="0.5" Color="#8B5CF6"/>
+                            <GradientStop Offset="1" Color="#06B6D4"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
                 </Border>
-                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                        Background="#FFFFFFF8" 
-                        CornerRadius="16" 
-                        Padding="32,24"
-                        BorderBrush="#E2E8F0" BorderThickness="1">
-                    <Border.Effect>
-                        <DropShadowEffect Color="#6366F1" Opacity="0.2" BlurRadius="30" ShadowDepth="0"/>
-                    </Border.Effect>
+
+                <!-- Header -->
+                <StackPanel Grid.Row="1" Margin="4,8,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock FontFamily="Segoe UI" FontSize="22" FontWeight="SemiBold" Foreground="#0F172A">
+                                <Run Text="✏️ "/><Run Text="TypeMate Editor"/></TextBlock>
+                            <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#64748B" Margin="2,2,0,0">Edit your selected text and insert it back</TextBlock>
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="✕" FontSize="14" FontWeight="Bold" Click="CancelButton_Click"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Divider -->
+                <Border Grid.Row="2" Height="1" Margin="0,4,0,12">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Offset="0" Color="#806366F1"/><GradientStop Offset="0.5" Color="#4D8B5CF6"/><GradientStop Offset="1" Color="#8006B6D4"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <!-- Text Editor -->
+                <Border Grid.Row="3" Background="#FFFFFFF8" BorderBrush="#E2E8F0" BorderThickness="1.5" CornerRadius="10" Margin="0,0,0,16">
+                    <Border.Effect><DropShadowEffect Color="#0F172A" Opacity="0.04" BlurRadius="8" ShadowDepth="2"/></Border.Effect>
+                    <TextBox x:Name="TextEditor" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                             HorizontalScrollBarVisibility="Disabled" Padding="16" FontFamily="Segoe UI Variable" FontSize="14"
+                             Foreground="#0F172A" Background="Transparent" BorderThickness="0" SelectionBrush="#818CF8"/>
+                </Border>
+
+                <!-- Bottom Bar -->
+                <Border Grid.Row="4" Background="#F8FAFC80" CornerRadius="10" Padding="12,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#94A3B8">
+                                <Run Text="⌨️ "/><Run Text="Press Ctrl+Enter to insert"/></TextBlock>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="AiButton" Style="{StaticResource SecondaryButton}" Height="38" Padding="14,0" Margin="0,0,8,0" Click="AiButton_Click">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="✨" FontSize="14" Margin="0,0,6,0"/><TextBlock Text="AI Tools" Style="{StaticResource InputLabel}"/>
+                                    <Path Data="M7 10l5 5 5-5z" Fill="#6366F1" Width="8" Height="8" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <Button.ContextMenu>
+                                    <ContextMenu x:Name="AiContextMenu">
+                                        <MenuItem Header="📖 Easy Read" Click="AiMenu_EasyRead_Click"/>
+                                        <MenuItem Header="😂 Witty" Click="AiMenu_Witty_Click"/>
+                                        <MenuItem Header="🎩 Formal" Click="AiMenu_Formal_Click"/>
+                                        <MenuItem Header="📋 Summarise" Click="AiMenu_Summarise_Click"/>
+                                        <MenuItem Header="📝 Expand" Click="AiMenu_Expand_Click"/>
+                                        <MenuItem Header="💼 LinkedIn Post" Click="AiMenu_LinkedIn_Click"/>
+                                        <MenuItem Header="🌐 English → Farsi" Click="AiMenu_EnglishToFarsi_Click"/>
+                                        <MenuItem Header="🤖 Convert to Prompt" Click="AiMenu_PromptOptimizer_Click"/>
+                                        <Separator/><MenuItem Header="⚙️ Set API Key…" Click="AiMenu_SetApiKey_Click"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                            <Button x:Name="InsertButton" Content="✅  Insert" Style="{StaticResource PrimaryButton}" Height="38" Padding="20,0" Margin="0,0,8,0" Click="InsertButton_Click"/>
+                            <Button x:Name="CancelButton" Content="✕  Cancel" Style="{StaticResource GhostButton}" Height="38" Padding="16,0" Click="CancelButton_Click"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Loading Overlay (covers entire content without affecting layout) -->
+            <Grid x:Name="LoadingOverlay" Grid.RowSpan="1" Visibility="Collapsed" Background="#0F172ACC">
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FFFFFFF8" CornerRadius="12" Padding="32,24" BorderBrush="#E2E8F0" BorderThickness="1">
+                    <Border.Effect><DropShadowEffect Color="#6366F1" Opacity="0.2" BlurRadius="30" ShadowDepth="0"/></Border.Effect>
                     <StackPanel HorizontalAlignment="Center">
-                        <!-- Animated Spinner -->
-                        <Ellipse Height="36" Width="36" 
-                                 Stroke="#6366F1" StrokeThickness="3" 
-                                  StrokeDashArray="8 6 14 6 8 6 14 6 8 6 14 6 8 6 14 6"
-                                 VerticalAlignment="Center"
-                                 Margin="0,0,0,16">
-                            <Ellipse.RenderTransform>
-                                <RotateTransform x:Name="SpinnerRotate" CenterX="18" CenterY="18"/>
-                            </Ellipse.RenderTransform>
+                        <Ellipse Height="36" Width="36" Stroke="#6366F1" StrokeThickness="3" StrokeDashArray="8 6 14 6 8 6 14 6 8 6 14 6 8 6 14 6" VerticalAlignment="Center" Margin="0,0,0,16">
+                            <Ellipse.RenderTransform><RotateTransform x:Name="SpinnerRotate" CenterX="18" CenterY="18"/></Ellipse.RenderTransform>
                             <Ellipse.Triggers>
                                 <EventTrigger RoutedEvent="Loaded">
-                                    <BeginStoryboard>
-                                        <Storyboard RepeatBehavior="Forever">
-                                            <DoubleAnimation Storyboard.TargetName="SpinnerRotate"
-                                                             Storyboard.TargetProperty="Angle"
-                                                             From="0" To="360"
-                                                             Duration="0:0:0.8"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
+                                    <BeginStoryboard><Storyboard RepeatBehavior="Forever">
+                                        <DoubleAnimation Storyboard.TargetName="SpinnerRotate" Storyboard.TargetProperty="Angle" From="0" To="360" Duration="0:0:0.8"/>
+                                    </Storyboard></BeginStoryboard>
                                 </EventTrigger>
                             </Ellipse.Triggers>
                         </Ellipse>
-                        <TextBlock Text="✨ Rewriting with AI..." 
-                                   FontFamily="Segoe UI" FontSize="14" 
-                                   FontWeight="SemiBold"
-                                   Foreground="#0F172A" 
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,4"/>
-                        <TextBlock Text="Please wait a moment..." 
-                                   FontFamily="Segoe UI" FontSize="12" 
-                                   Foreground="#64748B" 
-                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="✨ Rewriting with AI..." FontFamily="Segoe UI" FontSize="14" FontWeight="SemiBold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                        <TextBlock Text="Please wait a moment..." FontFamily="Segoe UI" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
             </Grid>

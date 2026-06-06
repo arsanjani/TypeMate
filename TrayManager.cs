@@ -206,7 +206,7 @@ namespace TypeMate
                 {
                     try
                     {
-                        var popup = new PopupWindow(string.Empty);
+                        var popup = new PopupWindow(string.Empty, System.Windows.Application.Current.MainWindow);
                         popup.Show();
                     }
                     catch (Exception ex)

@@ -9,9 +9,16 @@ namespace TypeMate
 {
     public partial class PopupWindow : Window
     {
-        public PopupWindow(string selectedText)
+        public PopupWindow(string selectedText, Window owner)
         {
+            Owner = owner;
+            WindowStartupLocation = WindowStartupLocation.Manual;
             InitializeComponent();
+            if (owner != null)
+            {
+                Left = owner.Left + (owner.Width - Width) / 2;
+                Top = owner.Top + (owner.Height - Height) / 2;
+            }
             TextEditor.Text = selectedText;
             AnimateIn();
             TextEditor.Focus();

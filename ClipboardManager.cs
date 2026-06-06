@@ -236,7 +236,7 @@ namespace TypeMate
                 {
                     try
                     {
-                        var popup = new PopupWindow(text);
+                        var popup = new PopupWindow(text, System.Windows.Application.Current.MainWindow);
                         popup.Show();
                         Logger.LogInfo("Popup window displayed successfully");
                     }
