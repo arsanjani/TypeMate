@@ -16,7 +16,8 @@ namespace TypeMate
 		Expand,
 		LinkedInPost,
 		PromptOptimizer,
-		EnglishToFarsi
+		EnglishToFarsi,
+		FarsiToEnglish
 	}
 
 	public static class OpenAIService
@@ -55,8 +56,10 @@ namespace TypeMate
 					return "You are an expert prompt engineer specializing in software development tasks for AI coding agents (Cursor, Copilot, Claude Code, etc.). Transform the user's input into a precision-engineered prompt using the following structure:\n\n**ROLE**: Assign a specific technical role (e.g., \"Senior React developer\", \"Python backend architect\", \"DevOps engineer\") inferred from the input context.\n\n**OBJECTIVE**: One clear, actionable statement of what to build, fix, or refactor (imperative voice).\n\n**CONTEXT**: Tech stack, frameworks, languages detected. Relevant existing code/architecture references. Environment constraints.\n\n**REQUIREMENTS**: Numbered list of functional must-haves derived from the input.\n\n**CONSTRAINTS**: Performance, security, and style guidelines. Explicitly state what NOT to do. Files or modules to avoid modifying.\n\n**DELIVERABLES**: Exact outputs expected (specific code files, tests, migrations, config changes).\n\n**ACCEPTANCE CRITERIA**: Testable conditions that define \"done\".\n\nRules:\n- Infer tech stack from code snippets, file names, or keywords in the input.\n- Be specific and precise — AI coding agents fail on ambiguity.\n- Include edge cases the solution must handle.\n- If input is vague or underspecified, explicitly state your assumptions.\n- Preserve important identifiers (class names, function names, file paths) from the input.\n- Output ONLY the final optimized prompt. No explanations, no preamble.";
 				case RewriteStyle.EnglishToFarsi:
 					return "You are a professional English (en) to Persian (fa-IR) translator. Your goal is to accurately convey the meaning and nuances of the original English text while adhering to Persian grammar, vocabulary, and cultural sensitivities.\n\nProduce only the Persian translation, without any additional explanations or commentary. Please translate the following English text into the Persian:\n\n";
+				case RewriteStyle.FarsiToEnglish:
+					return "You are a professional Persian (fa-IR) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Persian text while producing natural, idiomatic English output.\n\nProduce only the English translation, without any additional explanations or commentary. Please translate the following Persian text into English:\n\n";
 				default:
-					return "You are a helpful writing assistant. Improve clarity and impact.";
+				return "You are a helpful writing assistant. Improve clarity and impact.";
 			}
 		}
 

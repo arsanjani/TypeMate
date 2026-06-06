@@ -58,7 +58,7 @@ namespace TypeMate
         private async void AiMenu_LinkedIn_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.LinkedInPost);
         private async void AiMenu_PromptOptimizer_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.PromptOptimizer);
         private async void AiMenu_EnglishToFarsi_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.EnglishToFarsi);
-
+        private async void AiMenu_FarsiToEnglish_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.FarsiToEnglish);
         private async void AiMenu_SetApiKey_Click(object sender, RoutedEventArgs e)
         {
             await PromptForApiKeyAsync();

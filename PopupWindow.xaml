@@ -106,6 +106,7 @@
                                         <MenuItem Header="📝 Expand" Click="AiMenu_Expand_Click"/>
                                         <MenuItem Header="💼 LinkedIn Post" Click="AiMenu_LinkedIn_Click"/>
                                         <MenuItem Header="🌐 English → Farsi" Click="AiMenu_EnglishToFarsi_Click"/>
+                                        <MenuItem Header="🌐 Farsi → English" Click="AiMenu_FarsiToEnglish_Click"/>
                                         <MenuItem Header="🤖 Convert to Prompt" Click="AiMenu_PromptOptimizer_Click"/>
                                         <Separator/><MenuItem Header="⚙️ Set API Key…" Click="AiMenu_SetApiKey_Click"/>
                                     </ContextMenu>
