@@ -83,13 +83,13 @@
                         <StackPanel Grid.Column="1" Margin="12,0,0,0">
                             <TextBlock Text="Keyboard Shortcuts" FontSize="11" FontWeight="SemiBold" 
                                        Foreground="{DynamicResource SubtitleBrush}"/>
-                            <TextBlock FontSize="13" Foreground="{DynamicResource TitleBrush}" Margin="0,4,0,0">
-                                <Run Text="Ctrl+Alt+R&#xD;&#xA;"/>
-                                <Run Foreground="{DynamicResource SubtitleBrush}" Text="Capture"/>
-                            </TextBlock>
-                            <TextBlock FontSize="13" Foreground="{DynamicResource TitleBrush}">
-                                <Run Text="Click Tray Icon&#xD;&#xA;"/>
-                                <Run Foreground="{DynamicResource SubtitleBrush}" Text="Freestyle Editor"/>
+                             <TextBlock x:Name="HotkeyTextBlock" FontSize="13" Foreground="{DynamicResource TitleBrush}" Margin="0,4,0,0">
+                                 <Run FontWeight="SemiBold"/><Run Foreground="{DynamicResource SubtitleBrush}" Text="&#xD;&#xA;"/>
+                                 <Run Foreground="{DynamicResource SubtitleBrush}" Text="Capture"/>
+                             </TextBlock>
+                             <TextBlock FontSize="13" Foreground="{DynamicResource TitleBrush}">
+                                 <Run Text="Click Tray Icon&#xD;&#xA;"/>
+                                 <Run Foreground="{DynamicResource SubtitleBrush}" Text="Freestyle Editor"/>
                             </TextBlock>
                         </StackPanel>
                     </Grid>

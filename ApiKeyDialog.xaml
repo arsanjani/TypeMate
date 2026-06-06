@@ -255,6 +255,8 @@
                             <ComboBoxItem Content="nemotron-3-nano:4b"/>
                             <ComboBoxItem Content="gemma4:latest"/>
                             <ComboBoxItem Content="qwen3.5:0.8b"/>
+                            <ComboBoxItem Content="qwen3.6:35b"/>
+                            <ComboBoxItem Content="qwen3.6:27b"/>
                             <ComboBoxItem Content="translategemma:4b"/>
                         </ComboBox>
                         <TextBlock x:Name="ModelHelperText"

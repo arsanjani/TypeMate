@@ -180,10 +180,10 @@ namespace TypeMate
                     {
                         Logger.LogError("Error opening about dialog", ex);
 
-                        // Fallback to simple message box if dialog fails
+                        var hk = GlobalHotkey.RegisteredName ?? "Ctrl+Alt+R";
                         var message =
-                            "TypeMate — AI-powered writing companion\n\n" +
-                            "• Press Ctrl+Alt+R to capture selected text and open the editor\n" +
+                            $"TypeMate — AI-powered writing companion\n\n" +
+                            $"• Press {hk} to capture selected text and open the editor\n" +
                             "• Click the tray icon to open the Freestyle Editor\n\n" +
                             "GitHub: https://github.com/arsanjani/TypeMate";
 

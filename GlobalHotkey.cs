@@ -7,6 +7,8 @@ namespace TypeMate
     {
         private const int WM_HOTKEY = 0x0312;
         private const int HOTKEY_ID = 9000;
+
+        public static string? RegisteredName { get; private set; }
         
         // Windows API constants for modifiers
         private const uint MOD_ALT = 0x0001;
@@ -81,6 +83,7 @@ namespace TypeMate
                     if (success)
                     {
                         _isRegistered = true;
+                        RegisteredName = "Ctrl+Alt+R";
                         Logger.LogInfo($"Hotkey registered successfully on attempt {i + 1}! Hotkey: Ctrl+Alt+R");
                         return true;
                     }
@@ -125,7 +128,6 @@ namespace TypeMate
                 new { Modifiers = MOD_CONTROL | MOD_ALT, Key = VK_R, Name = "Ctrl+Alt+R" },
                 new { Modifiers = MOD_CONTROL | MOD_SHIFT, Key = VK_R, Name = "Ctrl+Shift+R" },
                 new { Modifiers = MOD_ALT | MOD_SHIFT, Key = VK_R, Name = "Alt+Shift+R" },
-                new { Modifiers = MOD_CONTROL | MOD_ALT, Key = (uint)0x54, Name = "Ctrl+Alt+T" }, // VK_T
             };
             
             foreach (var alt in alternatives)
@@ -141,6 +143,9 @@ namespace TypeMate
                 }
                 tempHotkey.Dispose();
             }
+            
+            // Revert if all alternatives fail
+            RegisteredName = null;
             
             Logger.LogError("All alternative hotkey combinations failed");
             return false;

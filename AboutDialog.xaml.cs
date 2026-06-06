@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Documents;
 
 namespace TypeMate
 {
@@ -9,6 +10,14 @@ namespace TypeMate
         public AboutDialog()
         {
             InitializeComponent();
+            Loaded += (s, e) =>
+            {
+                var hk = GlobalHotkey.RegisteredName ?? "Not set";
+                HotkeyTextBlock.Inlines.Clear();
+                HotkeyTextBlock.Inlines.Add(new Run(hk) { FontWeight = FontWeights.SemiBold });
+                HotkeyTextBlock.Inlines.Add(new Run("\r\n") { Foreground = (System.Windows.Media.Brush)FindResource("SubtitleBrush") });
+                HotkeyTextBlock.Inlines.Add(new Run("Capture") { Foreground = (System.Windows.Media.Brush)FindResource("SubtitleBrush") });
+            };
         }
 
         private void GitHubLink_Click(object sender, RoutedEventArgs e)

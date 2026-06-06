@@ -78,7 +78,7 @@ namespace TypeMate
 
 		private void ModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => SyncUI();
 
-		private bool IsOllamaModel(string? model) => model is "nemotron-3-nano:4b" or "gemma4:latest" or "qwen3.5:0.8b" or "translategemma:4b";
+		private bool IsOllamaModel(string? model) => model is "nemotron-3-nano:4b" or "gemma4:latest" or "qwen3.5:0.8b" or "qwen3.6:35b" or "qwen3.6:27b" or "translategemma:4b";
 
 		private async void Save_Click(object sender, RoutedEventArgs e)
 		{
