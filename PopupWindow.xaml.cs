@@ -9,6 +9,8 @@ namespace TypeMate
 {
     public partial class PopupWindow : Window
     {
+        private bool isRTL = false;
+
         public PopupWindow(string selectedText, Window owner)
         {
             Owner = owner;
@@ -59,6 +61,7 @@ namespace TypeMate
         private async void AiMenu_PromptOptimizer_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.PromptOptimizer);
         private async void AiMenu_EnglishToFarsi_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.EnglishToFarsi);
         private async void AiMenu_FarsiToEnglish_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.FarsiToEnglish);
+        private async void AiMenu_TwitterPost_Click(object sender, RoutedEventArgs e) => await RewriteWithStyle(RewriteStyle.TwitterPost);
         private async void AiMenu_SetApiKey_Click(object sender, RoutedEventArgs e)
         {
             await PromptForApiKeyAsync();
@@ -135,6 +138,7 @@ namespace TypeMate
         private void SetUiBusy(bool isBusy)
         {
             LoadingOverlay.Visibility = isBusy ? Visibility.Visible : Visibility.Collapsed;
+            RtlButton.IsEnabled = !isBusy;
             AiButton.IsEnabled = !isBusy;
             InsertButton.IsEnabled = !isBusy;
             CancelButton.IsEnabled = !isBusy;
@@ -179,5 +183,16 @@ namespace TypeMate
         }
 
         private void DragWindow(object sender, System.Windows.Input.MouseButtonEventArgs e) => DragMove();
+
+        private void RtlButton_Click(object sender, RoutedEventArgs e)
+        {
+            isRTL = !isRTL;
+            TextEditor.FlowDirection = isRTL ? System.Windows.FlowDirection.RightToLeft : System.Windows.FlowDirection.LeftToRight;
+            if (RtlIcon != null)
+            {
+                RtlIcon.Text = isRTL ? "\u2190" : "\u2194";
+                RtlIcon.Foreground = isRTL ? new SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 99, 102, 241)) : new SolidColorBrush(System.Windows.Media.Color.FromArgb(255, 148, 163, 184));
+            }
+        }
     }
 }

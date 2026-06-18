@@ -17,7 +17,8 @@ namespace TypeMate
 		LinkedInPost,
 		PromptOptimizer,
 		EnglishToFarsi,
-		FarsiToEnglish
+		FarsiToEnglish,
+		TwitterPost
 	}
 
 	public static class OpenAIService
@@ -58,6 +59,8 @@ namespace TypeMate
 					return "You are a professional English (en) to Persian (fa-IR) translator. Your goal is to accurately convey the meaning and nuances of the original English text while adhering to Persian grammar, vocabulary, and cultural sensitivities.\n\nProduce only the Persian translation, without any additional explanations or commentary. Please translate the following English text into the Persian:\n\n";
 				case RewriteStyle.FarsiToEnglish:
 					return "You are a professional Persian (fa-IR) to English (en) translator. Your goal is to accurately convey the meaning and nuances of the original Persian text while producing natural, idiomatic English output.\n\nProduce only the English translation, without any additional explanations or commentary. Please translate the following Persian text into English:\n\n";
+				case RewriteStyle.TwitterPost:
+					return "You are an expert technical content creator who writes in Farsi (Persian). Rewrite the user's text as a single Twitter/X post in Farsi language.\n\nRequirements:\n- Output must be entirely in Farsi (fa-IR)\n- Write it as a compelling, attractive, professional and easy to read Twitter post\n- Use technical, accurate language appropriate for a professional audience\n- Use the full available character limit (up to 280 chars) for the tweet content itself\n- Do NOT use any hashtags, emojis, or emoticons under any circumstances\n- Maintain the core message and meaning of the original text\n- Output ONLY the Farsi tweet text with no extra explanations.";
 				default:
 				return "You are a helpful writing assistant. Improve clarity and impact.";
 			}
