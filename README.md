@@ -21,6 +21,7 @@
 | LinkedIn Post | Professional LinkedIn-style post |
 | Prompt Optimizer | Transform input into a high-signal prompt for AI agents |
 | English to Farsi | Translate English to Persian (best with `translategemma:4b`) |
+| Twitter Post (Farsi) | Rewrite any text as a professional Farsi Twitter/X post |
 
 ### Core Features
 
