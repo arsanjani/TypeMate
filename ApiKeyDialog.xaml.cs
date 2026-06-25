@@ -2,10 +2,21 @@ using System;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 
 namespace TypeMate
 {
+	// Provider identifiers that match config storage
+	static class Providers
+	{
+		public const string OpenAI = "openai";
+		public const string Gemini = "gemini";
+		public const string Ollama = "ollama";
+		public const string OpenRouter = "openrouter";
+	}
+
 	public partial class ApiKeyDialog : Window
 	{
 		public string? SavedKey { get; private set; }
@@ -14,7 +25,13 @@ namespace TypeMate
 		public ApiKeyDialog()
 		{
 			InitializeComponent();
-			ModelComboBox.SelectedIndex = 1;
+
+			// Populate provider dropdown
+			ProviderComboBox.Items.Add("OpenAI");
+			ProviderComboBox.Items.Add("Gemini");
+			ProviderComboBox.Items.Add("Ollama");
+			ProviderComboBox.Items.Add("OpenRouter");
+
 			Loaded += ApiKeyDialog_Loaded;
 			ApiKeyBox.PasswordChanged += ApiKeyBox_PasswordChanged;
 		}
@@ -33,88 +50,309 @@ namespace TypeMate
 			this.BeginAnimation(Window.MarginProperty, new ThicknessAnimation { From = new Thickness(0, -20, 0, 0), To = new Thickness(0), Duration = TimeSpan.FromSeconds(0.3), DecelerationRatio = 0.8 });
 		}
 
+		private bool _isInitializing;
+		private bool _userEditedApiKey;
+
 		private void ApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
 		{
-			if (ApiKeyBox.Tag?.ToString() == "HasExistingKey") ApiKeyBox.Tag = null;
+			if (_isInitializing) return;
+			_userEditedApiKey = true;
 		}
 
 		private async Task LoadCurrentSettingsAsync()
 		{
 			try
 			{
-				string? existingKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
+				_isInitializing = true;
+
+				string? provider = await ApiKeyStore.GetProviderAsync();
 				string? currentModel = await ApiKeyStore.GetPreferredModelAsync();
 
+				// Select the saved provider in dropdown
+				if (!string.IsNullOrEmpty(provider))
+				{
+					string displayName = GetProviderDisplayName(provider);
+					for (int i = 0; i < ProviderComboBox.Items.Count; i++)
+					{
+						if (ProviderComboBox.Items[i].ToString() == displayName)
+						{
+							ProviderComboBox.SelectedIndex = i;
+							break;
+						}
+					}
+				}
+
+				// Restore model text
 				if (!string.IsNullOrEmpty(currentModel))
 				{
-					int idx = 0;
-					foreach (var item in ModelComboBox.Items)
-					{
-						if (item is ComboBoxItem cbi && cbi.Content?.ToString() == currentModel) { ModelComboBox.SelectedIndex = idx; break; }
-						idx++;
-					}
+					ModelBox.Text = currentModel;
+				}
+				else
+				{
+					ModelBox.Text = GetDefaultModel(provider ?? Providers.OpenAI);
 				}
 
 				SyncUI();
 
+				// Load the appropriate existing key based on provider
+				string? existingKey = await GetExistingKeyForProvider(provider);
 				if (!string.IsNullOrEmpty(existingKey))
 				{
 					ApiKeyBox.Password = new string('\u2022', 50);
-					ApiKeyBox.Tag = "HasExistingKey";
 				}
 			}
-			catch (Exception ex) { Logger.LogError("Error loading current settings", ex); }
+			catch (Exception ex)
+			{
+				Logger.LogError("Error loading current settings", ex);
+			}
+			finally
+			{
+				_isInitializing = false;
+			}
 		}
 
 		private void SyncUI()
 		{
-			if (!(ModelComboBox.SelectedItem is ComboBoxItem selectedItem)) return;
-			string? model = selectedItem.Content?.ToString();
-			bool isOllama = IsOllamaModel(model);
-			ApiKeyPanel.Visibility = isOllama ? Visibility.Collapsed : Visibility.Visible;
-			OllamaBanner.Visibility = isOllama ? Visibility.Visible : Visibility.Collapsed;
-			HelperText.Text = isOllama ? "These models run locally via Ollama (localhost:11434). No API key required." : "Configure your AI provider settings. Credentials are stored securely.";
+			string provider = GetSelectedProvider();
+			bool isOllama = provider == Providers.Ollama;
+
+			if (isOllama)
+			{
+				ApiKeyPanel.Visibility = Visibility.Collapsed;
+				ModelPanel.Visibility = Visibility.Visible;
+				OllamaBanner.Visibility = Visibility.Visible;
+				SecurityNotice.Visibility = Visibility.Collapsed;
+				HelperText.Text = "These models run locally via Ollama (localhost:11434). No API key required.";
+				ModelHelperText.Text = "Enter the Ollama model name (e.g., llama3.2, gemma:2b)";
+			}
+			else
+			{
+				ApiKeyPanel.Visibility = Visibility.Visible;
+				ModelPanel.Visibility = Visibility.Visible;
+				OllamaBanner.Visibility = Visibility.Collapsed;
+				SecurityNotice.Visibility = Visibility.Visible;
+
+				string keyLabel = GetProviderKeyLabel(provider);
+				ApiKeyLabelText.Text = $"\u0001f510  {keyLabel} API Key";
+				HelperText.Text = "Configure your AI provider settings. Credentials are stored securely.";
+				ModelHelperText.Text = GetModelHelperText(provider);
+			}
 		}
 
-		private void ModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => SyncUI();
+		private void ProviderComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e) => SyncUI();
 
-		private bool IsOllamaModel(string? model) => model is "nemotron-3-nano:4b" or "gemma4:latest" or "qwen3.5:0.8b" or "qwen3.6:35b" or "qwen3.6:27b" or "translategemma:4b";
+		private string GetSelectedProvider()
+		{
+			if (ProviderComboBox.SelectedItem?.ToString() is not string displayName)
+				return Providers.OpenAI;
+
+			return GetProviderKey(displayName);
+		}
+
+		private static string GetProviderKey(string displayName)
+		{
+			return displayName.ToLowerInvariant();
+		}
+
+		private static string GetProviderDisplayName(string providerKey)
+		{
+			return providerKey switch
+			{
+				"openai" => "OpenAI",
+				"gemini" => "Gemini",
+				"ollama" => "Ollama",
+				"openrouter" => "OpenRouter",
+				_ => "OpenAI"
+			};
+		}
+
+		private static string GetProviderKeyLabel(string provider)
+		{
+			return provider switch
+			{
+				"openai" => "OpenAI",
+				"gemini" => "Gemini",
+				"openrouter" => "OpenRouter",
+				_ => "OpenAI"
+			};
+		}
+
+		private static string GetModelHelperText(string provider)
+		{
+			return provider switch
+			{
+				"openai" => "e.g., gpt-4o-mini, gpt-4o, o3-mini",
+				"gemini" => "e.g., gemini-2.0-flash, gemini-flash-latest",
+				"openrouter" => "e.g., openai/gpt-4o, anthropic/claude-sonnet-4-20250514",
+				_ => "Enter the model identifier for your provider"
+			};
+		}
+
+		private static string GetDefaultModel(string provider)
+		{
+			return provider switch
+			{
+				"openai" => "gpt-4o-mini",
+				"gemini" => "gemini-flash-latest",
+				"ollama" => "llama3.2",
+				"openrouter" => "openai/gpt-4o",
+				_ => "gpt-4o-mini"
+			};
+		}
+
+		private static async Task<string?> GetExistingKeyForProvider(string? provider)
+		{
+			if (string.Equals(provider, Providers.Gemini, StringComparison.OrdinalIgnoreCase))
+				return await ApiKeyStore.GetGeminiApiKeyAsync();
+			if (string.Equals(provider, Providers.OpenRouter, StringComparison.OrdinalIgnoreCase))
+				return await ApiKeyStore.GetOpenRouterApiKeyAsync();
+			// Default to OpenAI key
+			return await ApiKeyStore.GetOpenAIApiKeyAsync();
+		}
 
 		private async void Save_Click(object sender, RoutedEventArgs e)
 		{
 			try
 			{
-				string selectedModel = (ModelComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "gpt-4o-mini";
-				bool isOllama = IsOllamaModel(selectedModel);
+				string provider = GetSelectedProvider();
+				bool isOllama = provider == Providers.Ollama;
+				string model = ModelBox.Text?.Trim() ?? string.Empty;
+
+				if (string.IsNullOrWhiteSpace(model))
+				{
+					System.Windows.MessageBox.Show("Please enter a model name.", "TypeMate");
+					return;
+				}
 
 				if (isOllama)
 				{
-					if (!await ApiKeyStore.SaveOllamaConfigAsync(selectedModel)) { System.Windows.MessageBox.Show("Failed to save configuration.", "TypeMate"); return; }
+					if (!await ApiKeyStore.SaveOllamaConfigAsync(model))
+					{
+						System.Windows.MessageBox.Show("Failed to save configuration.", "TypeMate");
+						return;
+					}
+					SavedModel = model;
+					this.DialogResult = true;
+					this.Close();
+					return;
+				}
+
+				// Provider requires API key
+				string key;
+				if (!_userEditedApiKey)
+				{
+					key = await GetExistingKeyForProvider(provider) ?? string.Empty;
+					if (string.IsNullOrEmpty(key))
+					{
+						string label = GetProviderKeyLabel(provider);
+						System.Windows.MessageBox.Show($"Please enter a valid {label} API key.", "TypeMate");
+						return;
+					}
 				}
 				else
 				{
-					string key = ApiKeyBox.Password?.Trim() ?? string.Empty;
-					bool hasExistingKey = ApiKeyBox.Tag?.ToString() == "HasExistingKey";
-					bool isPlaceholder = key.StartsWith("\u2022");
-
-					if (hasExistingKey && isPlaceholder)
+					key = ApiKeyBox.Password?.Trim() ?? string.Empty;
+					if (string.IsNullOrWhiteSpace(key))
 					{
-						key = await ApiKeyStore.GetOpenAIApiKeyAsync() ?? string.Empty;
-						if (string.IsNullOrEmpty(key)) { System.Windows.MessageBox.Show("Please enter a valid API key.", "TypeMate"); return; }
+						string label = GetProviderKeyLabel(provider);
+						System.Windows.MessageBox.Show($"Please enter a valid {label} API key.", "TypeMate");
+						return;
 					}
-
-					if (string.IsNullOrWhiteSpace(key) || isPlaceholder) { System.Windows.MessageBox.Show("Please enter a valid API key.", "TypeMate"); return; }
-					if (!await ApiKeyStore.SaveOpenAIConfigAsync(key, selectedModel)) { System.Windows.MessageBox.Show("Failed to save OpenAI configuration.", "TypeMate"); return; }
-					SavedKey = key;
 				}
 
-				SavedModel = selectedModel;
+				// Save based on provider
+				bool saved = false;
+				if (provider == Providers.OpenAI)
+				{
+					saved = await ApiKeyStore.SaveOpenAIConfigAsync(key, model);
+				}
+				else if (provider == Providers.Gemini)
+				{
+					saved = await ApiKeyStore.SaveGeminiConfigAsync(key, model, Providers.Gemini);
+				}
+				else if (provider == Providers.OpenRouter)
+				{
+					saved = await ApiKeyStore.SaveOpenRouterConfigAsync(key, model);
+				}
+
+				if (!saved)
+				{
+					System.Windows.MessageBox.Show("Failed to save configuration.", "TypeMate");
+					return;
+				}
+
+				SavedKey = key;
+				SavedModel = model;
 				this.DialogResult = true;
 				this.Close();
 			}
-			catch (Exception ex) { Logger.LogError("Error saving configuration", ex); System.Windows.MessageBox.Show("An error occurred while saving the configuration.", "TypeMate"); }
+			catch (Exception ex)
+			{
+				Logger.LogError("Error saving configuration", ex);
+				System.Windows.MessageBox.Show("An error occurred while saving the configuration.", "TypeMate");
+			}
 		}
 
 		private void Cancel_Click(object sender, RoutedEventArgs e) { this.DialogResult = false; this.Close(); }
+
+		private void ApiKeyBox_GotFocus(object sender, RoutedEventArgs e)
+		{
+			ApiKeyBoxGrid.SetValue(Grid.TagProperty, "Focused");
+			SetInputBorder("#6366F1", 2);
+		}
+
+		private void ApiKeyBox_LostFocus(object sender, RoutedEventArgs e)
+		{
+			ApiKeyBoxGrid.SetValue(Grid.TagProperty, null);
+			SetInputBorder("#E2E8F0", 1.5);
+		}
+
+		private void ApiKeyBox_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+		{
+			if (!ApiKeyBox.IsKeyboardFocused)
+				SetInputBorder("#94A3B8", 1.5);
+		}
+
+		private void ApiKeyBox_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+		{
+			if (!ApiKeyBox.IsKeyboardFocused)
+				SetInputBorder("#E2E8F0", 1.5);
+		}
+
+		private void ModelBox_GotFocus(object sender, RoutedEventArgs e)
+		{
+			SetModelInputBorder("#6366F1", 2);
+		}
+
+		private void ModelBox_LostFocus(object sender, RoutedEventArgs e)
+		{
+			SetModelInputBorder("#E2E8F0", 1.5);
+		}
+
+		private void ModelBox_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+		{
+			if (!ModelBox.IsKeyboardFocused)
+				SetModelInputBorder("#94A3B8", 1.5);
+		}
+
+		private void ModelBox_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+		{
+			if (!ModelBox.IsKeyboardFocused)
+				SetModelInputBorder("#E2E8F0", 1.5);
+		}
+
+		private void SetInputBorder(string hexColor, double thickness)
+		{
+			var color = System.Windows.Media.ColorConverter.ConvertFromString(hexColor);
+			ApiKeyBoxBorder.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)color);
+			ApiKeyBoxBorder.BorderThickness = new Thickness(thickness);
+		}
+
+		private void SetModelInputBorder(string hexColor, double thickness)
+		{
+			var color = System.Windows.Media.ColorConverter.ConvertFromString(hexColor);
+			ModelBoxBorder.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)color);
+			ModelBoxBorder.BorderThickness = new Thickness(thickness);
+		}
 	}
 }

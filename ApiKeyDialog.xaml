@@ -66,7 +66,7 @@
                            Margin="0,4,0,0"/>
             </StackPanel>
 
-            <!-- Content - No scroll -->
+            <!-- Content -->
             <StackPanel Grid.Row="1">
                     <!-- Ollama Info Banner -->
                     <Border x:Name="OllamaBanner"
@@ -79,7 +79,7 @@
                             BorderBrush="#86EFAC80">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="✅ " FontSize="16" VerticalAlignment="Center"/>
-                            <TextBlock Text="Ollama detected — local AI models available (no API key needed)" 
+                            <TextBlock Text="Ollama — local AI models (no API key needed)" 
                                        FontFamily="Segoe UI Variable" 
                                        FontSize="12"
                                        FontWeight="SemiBold"
@@ -89,7 +89,8 @@
                     </Border>
 
                     <!-- Security Notice -->
-                    <Border Background="#EEF2FF80"
+                    <Border x:Name="SecurityNotice"
+                            Background="#EEF2FF80"
                             CornerRadius="10"
                             Padding="14,12"
                             Margin="0,0,0,16"
@@ -105,60 +106,13 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- API Key Field -->
-                    <StackPanel x:Name="ApiKeyPanel" Margin="0,0,0,16">
+                    <!-- Provider Selection -->
+                    <StackPanel Margin="0,0,0,16">
                         <TextBlock Style="{StaticResource InputLabel}">
-                            <Run Text="🔐 "/>
-                            <Run Text="API Key"/>
+                            <Run Text="🏢 "/>
+                            <Run Text="AI Provider"/>
                         </TextBlock>
-                        <PasswordBox x:Name="ApiKeyBox" 
-                                     Height="48"
-                                     Padding="16,12"
-                                     FontFamily="Segoe UI Variable"
-                                     FontSize="14"
-                                     BorderThickness="1.5"
-                                     BorderBrush="#E2E8F0"
-                                     Background="#FFFFFFF0"
-                                     Foreground="#0F172A"
-                                     PasswordChar="●">
-                            <PasswordBox.Style>
-                                <Style TargetType="PasswordBox">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="PasswordBox">
-                                                <Border x:Name="Border" 
-                                                        Background="{TemplateBinding Background}" 
-                                                        BorderBrush="{TemplateBinding BorderBrush}" 
-                                                        BorderThickness="{TemplateBinding BorderThickness}" 
-                                                        CornerRadius="12">
-                                                    <ScrollViewer x:Name="PART_ContentHost" 
-                                                                  Margin="{TemplateBinding Padding}" 
-                                                                  VerticalAlignment="Center"/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="Border" Property="BorderBrush" Value="#94A3B8"/>
-                                                    </Trigger>
-                                                    <Trigger Property="IsFocused" Value="True">
-                                                        <Setter TargetName="Border" Property="BorderBrush" Value="#6366F1"/>
-                                                        <Setter TargetName="Border" Property="BorderThickness" Value="2"/>
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </PasswordBox.Style>
-                        </PasswordBox>
-                    </StackPanel>
-
-                    <!-- Model Selection -->
-                    <StackPanel Margin="0,0,0,0">
-                        <TextBlock Style="{StaticResource InputLabel}">
-                            <Run Text="🤖 "/>
-                            <Run Text="AI Model"/>
-                        </TextBlock>
-                        <ComboBox x:Name="ModelComboBox" 
+                        <ComboBox x:Name="ProviderComboBox" 
                                   Height="48"
                                   Padding="16,8"
                                   FontFamily="Segoe UI Variable"
@@ -167,7 +121,7 @@
                                   BorderBrush="#E2E8F0"
                                   Background="#FFFFFFF0"
                                   Foreground="#0F172A"
-                                  SelectionChanged="ModelComboBox_SelectionChanged">
+                                  SelectionChanged="ProviderComboBox_SelectionChanged">
                             <ComboBox.Style>
                                 <Style TargetType="ComboBox">
                                     <Setter Property="Template">
@@ -180,11 +134,11 @@
                                                             BorderThickness="{TemplateBinding BorderThickness}" 
                                                             CornerRadius="12">
                                                         <Grid>
-                                                        <ContentPresenter x:Name="PART_ContentHost"
-                                                                          Content="{TemplateBinding SelectionBoxItem}"
-                                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
-                                                                          Margin="{TemplateBinding Padding}"
-                                                                          VerticalAlignment="Center"/>
+                                                            <ContentPresenter x:Name="PART_ContentHost"
+                                                                              Content="{TemplateBinding SelectionBoxItem}"
+                                                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                                              Margin="{TemplateBinding Padding}"
+                                                                              VerticalAlignment="Center"/>
                                                             <ToggleButton x:Name="DropDownToggle" 
                                                                           Focusable="False" 
                                                                           IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" 
@@ -232,35 +186,60 @@
                                     </Setter>
                                 </Style>
                             </ComboBox.Style>
-                            <!-- OpenAI Models Group -->
-                            <ComboBoxItem IsEnabled="False" FontWeight="Bold" Foreground="#6366F1">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="⚡ " FontSize="12"/>
-                                    <TextBlock Text="OpenAI Models"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem Content="gpt-4o-mini"/>
-                            <ComboBoxItem Content="gpt-4o"/>
-                            <ComboBoxItem Content="gpt-4-turbo"/>
-                            <ComboBoxItem Content="gpt-3.5-turbo"/>
-                            <ComboBoxItem Content="o1-mini"/>
-                            <ComboBoxItem Content="o1-preview"/>
-                            <!-- Ollama Models Group -->
-                            <ComboBoxItem IsEnabled="False" FontWeight="Bold" Foreground="#06B6D4">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="🏠 " FontSize="12"/>
-                                    <TextBlock Text="Ollama (Local)"/>
-                                </StackPanel>
-                            </ComboBoxItem>
-                            <ComboBoxItem Content="nemotron-3-nano:4b"/>
-                            <ComboBoxItem Content="gemma4:latest"/>
-                            <ComboBoxItem Content="qwen3.5:0.8b"/>
-                            <ComboBoxItem Content="qwen3.6:35b"/>
-                            <ComboBoxItem Content="qwen3.6:27b"/>
-                            <ComboBoxItem Content="translategemma:4b"/>
                         </ComboBox>
+                        <TextBlock x:Name="ProviderHelperText"
+                                   Text="Select your preferred AI provider" 
+                                   Style="{StaticResource HelperText}" 
+                                   Margin="0,6,0,0"/>
+                    </StackPanel>
+
+                    <!-- API Key Field -->
+                    <StackPanel x:Name="ApiKeyPanel" Margin="0,0,0,16">
+                        <TextBlock x:Name="ApiKeyLabelText" Text="🔐  API Key" Style="{StaticResource InputLabel}"/>
+                        <Grid x:Name="ApiKeyBoxGrid" MouseEnter="ApiKeyBox_MouseEnter" MouseLeave="ApiKeyBox_MouseLeave">
+                            <Border x:Name="ApiKeyBoxBorder"
+                                    Height="48"
+                                    Background="#FFFFFFF0"
+                                    BorderBrush="#E2E8F0"
+                                    BorderThickness="1.5"
+                                    CornerRadius="12"/>
+                            <PasswordBox x:Name="ApiKeyBox" 
+                                          Padding="16,12"
+                                          FontFamily="Segoe UI Variable"
+                                          FontSize="14"
+                                          Background="Transparent"
+                                          BorderBrush="Transparent"
+                                          BorderThickness="0"
+                                          Foreground="#0F172A"
+                                          PasswordChar="●"
+                                          GotKeyboardFocus="ApiKeyBox_GotFocus"
+                                          LostKeyboardFocus="ApiKeyBox_LostFocus"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Model Name Field -->
+                    <StackPanel x:Name="ModelPanel" Margin="0,0,0,16">
+                        <TextBlock Text="🤖  Model Name" Style="{StaticResource InputLabel}"/>
+                        <Grid MouseEnter="ModelBox_MouseEnter" MouseLeave="ModelBox_MouseLeave">
+                            <Border x:Name="ModelBoxBorder"
+                                    Height="48"
+                                    Background="#FFFFFFF0"
+                                    BorderBrush="#E2E8F0"
+                                    BorderThickness="1.5"
+                                    CornerRadius="12"/>
+                            <TextBox x:Name="ModelBox"
+                                     Padding="16,12"
+                                     FontFamily="Segoe UI Variable"
+                                     FontSize="14"
+                                     Background="Transparent"
+                                     BorderBrush="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="#0F172A"
+                                     GotKeyboardFocus="ModelBox_GotFocus"
+                                     LostKeyboardFocus="ModelBox_LostFocus"/>
+                        </Grid>
                         <TextBlock x:Name="ModelHelperText"
-                                   Text="Choose the AI model for text processing" 
+                                   Text="Enter the model identifier for your provider" 
                                    Style="{StaticResource HelperText}" 
                                    Margin="0,6,0,0"/>
                     </StackPanel>

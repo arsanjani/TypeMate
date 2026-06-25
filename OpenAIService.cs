@@ -33,6 +33,17 @@ namespace TypeMate
 			Timeout = TimeSpan.FromSeconds(60)
 		};
 
+		private static readonly HttpClient GeminiHttp = new HttpClient
+		{
+			Timeout = TimeSpan.FromSeconds(45)
+		};
+
+		private static readonly HttpClient OpenRouterHttp = new HttpClient
+		{
+			Timeout = TimeSpan.FromSeconds(45)
+		};
+
+		private const string GeminiModel = "gemini-flash-latest";
 		private const string PreferredModel = "o4-mini";
 		private const string FallbackModel = "gpt-4o-mini";
 		private const string OllamaEndpoint = "http://localhost:11434/v1/chat/completions";
@@ -180,6 +191,86 @@ namespace TypeMate
 			return null;
 		}
 
+		private static async Task<string?> CallGeminiAsync(string model, string apiKey, RewriteStyle style, string input)
+		{
+			GeminiHttp.DefaultRequestHeaders.Add("X-goog-api-key", apiKey);
+
+			var payload = new
+			{
+				contents = new object[]
+				{
+					new { parts = new object[] { new { text = input } } }
+				},
+				systemInstruction = new { parts = new object[] { new { text = BuildSystemPrompt(style) } } },
+				generationConfig = new
+				{
+					temperature = style == RewriteStyle.PromptOptimizer ? 0.3 : 0.7,
+					maxOutputTokens = (style == RewriteStyle.PromptOptimizer) ? 1500 : 1024
+				}
+			};
+
+			string json = JsonSerializer.Serialize(payload);
+			using StringContent body = new StringContent(json, Encoding.UTF8, "application/json");
+			using HttpResponseMessage resp = await GeminiHttp.PostAsync($"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent", body);
+			string respText = await resp.Content.ReadAsStringAsync();
+			if (!resp.IsSuccessStatusCode)
+			{
+				Logger.LogWarning($"Gemini error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
+				return null;
+			}
+
+			using JsonDocument doc = JsonDocument.Parse(respText);
+			JsonElement root = doc.RootElement;
+			if (root.TryGetProperty("candidates", out JsonElement candidates) && candidates.GetArrayLength() > 0)
+			{
+				JsonElement first = candidates[0];
+				if (first.TryGetProperty("content", out JsonElement content) && content.TryGetProperty("parts", out JsonElement parts) && parts.GetArrayLength() > 0)
+				{
+					return parts[0].TryGetProperty("text", out JsonElement text) ? text.GetString() : null;
+				}
+			}
+			return null;
+		}
+
+		private static async Task<string?> CallOpenRouterAsync(string model, string apiKey, RewriteStyle style, string input)
+		{
+			OpenRouterHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+
+			var payload = new
+			{
+				model = model,
+				messages = new object[]
+				{
+					new { role = "system", content = BuildSystemPrompt(style) },
+					new { role = "user", content = input }
+				},
+				temperature = style == RewriteStyle.PromptOptimizer ? 0.3 : 0.7,
+				max_tokens = (style == RewriteStyle.PromptOptimizer) ? 1500 : 512
+			};
+
+			string json = JsonSerializer.Serialize(payload);
+			using StringContent body = new StringContent(json, Encoding.UTF8, "application/json");
+			using HttpResponseMessage resp = await OpenRouterHttp.PostAsync("https://openrouter.ai/api/v1/chat/completions", body);
+			string respText = await resp.Content.ReadAsStringAsync();
+			if (!resp.IsSuccessStatusCode)
+			{
+				Logger.LogWarning($"OpenRouter error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
+				return null;
+			}
+
+			using JsonDocument doc = JsonDocument.Parse(respText);
+			JsonElement root = doc.RootElement;
+			if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
+			{
+				JsonElement first = choices[0];
+				if (first.TryGetProperty("message", out JsonElement message) && message.TryGetProperty("content", out JsonElement content))
+				{
+					return content.GetString();
+				}
+			}
+			return null;
+		}
+
 		public static async Task<string?> RewriteAsync(string input, RewriteStyle style)
 		{
 			string? userPreferredModel = await ApiKeyStore.GetPreferredModelAsync();
@@ -189,9 +280,17 @@ namespace TypeMate
 			}
 
 			string? provider = await ApiKeyStore.GetProviderAsync();
-			if (!string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
+
+			// Ollama (local, no API key)
+			if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
 			{
-				string? apiKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
+				return await CallOllamaAsync(userPreferredModel, style, input);
+			}
+
+			// OpenRouter
+			if (string.Equals(provider, "openrouter", StringComparison.OrdinalIgnoreCase))
+			{
+				string? apiKey = await ApiKeyStore.GetOpenRouterApiKeyAsync();
 				if (string.IsNullOrWhiteSpace(apiKey))
 				{
 					return null;
@@ -199,21 +298,56 @@ namespace TypeMate
 
 				try
 				{
-					string? result = await CallOpenAIAsync(userPreferredModel, apiKey, style, input);
-					if (string.IsNullOrWhiteSpace(result) && userPreferredModel != FallbackModel)
-					{
-						result = await CallOpenAIAsync(FallbackModel, apiKey, style, input);
-					}
-					return result;
+					return await CallOpenRouterAsync(userPreferredModel, apiKey, style, input);
 				}
 				catch (Exception ex)
 				{
-					Logger.LogError("OpenAI rewrite failed", ex);
+					Logger.LogError("OpenRouter rewrite failed", ex);
 					return null;
 				}
 			}
 
-			return await CallOllamaAsync(userPreferredModel, style, input);
+			// Gemini
+			if (string.Equals(provider, "gemini", StringComparison.OrdinalIgnoreCase))
+			{
+				string? apiKey = await ApiKeyStore.GetGeminiApiKeyAsync();
+				if (string.IsNullOrWhiteSpace(apiKey))
+				{
+					return null;
+				}
+
+				try
+				{
+					return await CallGeminiAsync(userPreferredModel, apiKey, style, input);
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError("Gemini rewrite failed", ex);
+					return null;
+				}
+			}
+
+			// OpenAI (default)
+			string? openaiKey = await ApiKeyStore.GetOpenAIApiKeyAsync();
+			if (string.IsNullOrWhiteSpace(openaiKey))
+			{
+				return null;
+			}
+
+			try
+			{
+				string? result = await CallOpenAIAsync(userPreferredModel, openaiKey, style, input);
+				if (string.IsNullOrWhiteSpace(result) && userPreferredModel != FallbackModel)
+				{
+					result = await CallOpenAIAsync(FallbackModel, openaiKey, style, input);
+				}
+				return result;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("OpenAI rewrite failed", ex);
+				return null;
+			}
 		}
 	}
 }

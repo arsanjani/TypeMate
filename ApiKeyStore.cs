@@ -15,8 +15,10 @@ namespace TypeMate
 		private class ConfigModel
 		{
 			public string? EncryptedOpenAIApiKeyBase64 { get; set; }
+			public string? EncryptedGeminiApiKeyBase64 { get; set; }
+			public string? EncryptedOpenRouterApiKeyBase64 { get; set; }
 			public string? PreferredModel { get; set; }
-			public string? Provider { get; set; } // "openai" or "ollama"
+			public string? Provider { get; set; } // "openai", "gemini", "ollama", or "openrouter"
 		}
 
 		public static async Task<string?> GetOpenAIApiKeyAsync()
@@ -85,29 +87,147 @@ namespace TypeMate
 
 		public static async Task<bool> SaveOpenAIConfigAsync(string apiKey, string preferredModel)
 		{
-			return await SaveConfigAsync(apiKey, preferredModel, "openai");
+			return await SaveGeminiConfigAsync(apiKey, preferredModel, "openai");
 		}
 
 		public static async Task<bool> SaveOllamaConfigAsync(string preferredModel)
 		{
-			return await SaveConfigAsync(null, preferredModel, "ollama");
+			return await SaveGeminiConfigAsync(null, preferredModel, "ollama");
 		}
 
-		private static async Task<bool> SaveConfigAsync(string? apiKey, string preferredModel, string provider)
+		public static async Task<string?> GetOpenRouterApiKeyAsync()
 		{
 			try
 			{
-				ConfigModel config = new ConfigModel
+				string configPath = GetConfigPath();
+				if (!File.Exists(configPath))
 				{
-					EncryptedOpenAIApiKeyBase64 = apiKey == null ? null : Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(apiKey), null, DataProtectionScope.CurrentUser)),
-					PreferredModel = preferredModel,
-					Provider = provider
-				};
+					return null;
+				}
+
+				await using FileStream stream = File.OpenRead(configPath);
+				ConfigModel? config = await JsonSerializer.DeserializeAsync<ConfigModel>(stream);
+				if (config == null || string.IsNullOrWhiteSpace(config.EncryptedOpenRouterApiKeyBase64))
+				{
+					return null;
+				}
+
+				byte[] encrypted = Convert.FromBase64String(config.EncryptedOpenRouterApiKeyBase64);
+				byte[] decrypted = ProtectedData.Unprotect(encrypted, optionalEntropy: null, scope: DataProtectionScope.CurrentUser);
+				return Encoding.UTF8.GetString(decrypted);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("Failed to read OpenRouter API key", ex);
+				return null;
+			}
+		}
+
+		public static async Task<string?> GetGeminiApiKeyAsync()
+		{
+			try
+			{
+				string configPath = GetConfigPath();
+				if (!File.Exists(configPath))
+				{
+					return null;
+				}
+
+				await using FileStream stream = File.OpenRead(configPath);
+				ConfigModel? config = await JsonSerializer.DeserializeAsync<ConfigModel>(stream);
+				if (config == null || string.IsNullOrWhiteSpace(config.EncryptedGeminiApiKeyBase64))
+				{
+					return null;
+				}
+
+				byte[] encrypted = Convert.FromBase64String(config.EncryptedGeminiApiKeyBase64);
+				byte[] decrypted = ProtectedData.Unprotect(encrypted, optionalEntropy: null, scope: DataProtectionScope.CurrentUser);
+				return Encoding.UTF8.GetString(decrypted);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("Failed to read Gemini API key", ex);
+				return null;
+			}
+		}
+
+		public static async Task<bool> SaveGeminiApiKeyAsync(string apiKey)
+		{
+			try
+			{
+				ConfigModel config = await GetConfigAsync() ?? new ConfigModel();
 
 				string directory = GetAppDirectory();
 				if (!Directory.Exists(directory))
 				{
 					Directory.CreateDirectory(directory);
+				}
+
+				byte[] plain = Encoding.UTF8.GetBytes(apiKey);
+				byte[] encrypted = ProtectedData.Protect(plain, optionalEntropy: null, scope: DataProtectionScope.CurrentUser);
+				string base64 = Convert.ToBase64String(encrypted);
+
+				config.EncryptedGeminiApiKeyBase64 = base64;
+
+				JsonSerializerOptions options = new JsonSerializerOptions
+				{
+					WriteIndented = true
+				};
+
+				string configPath = GetConfigPath();
+				await using FileStream stream = File.Create(configPath);
+				await JsonSerializer.SerializeAsync(stream, config, options);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError("Failed to save Gemini API key", ex);
+				return false;
+			}
+		}
+
+		public static async Task<bool> SaveOpenRouterConfigAsync(string apiKey, string preferredModel)
+		{
+			return await SaveProviderConfigAsync(apiKey, preferredModel, "openrouter");
+		}
+
+		public static async Task<bool> SaveGeminiConfigAsync(string? apiKey, string preferredModel, string provider)
+		{
+			return await SaveProviderConfigAsync(apiKey, preferredModel, provider);
+		}
+
+		private static async Task<bool> SaveProviderConfigAsync(string? apiKey, string preferredModel, string provider)
+		{
+			try
+			{
+				string directory = GetAppDirectory();
+				if (!Directory.Exists(directory))
+				{
+					Directory.CreateDirectory(directory);
+				}
+
+				ConfigModel config = await GetConfigAsync() ?? new ConfigModel();
+				config.PreferredModel = preferredModel;
+				config.Provider = provider;
+
+				// Only update the API key that belongs to the selected provider
+				if (string.Equals(provider, "openai", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(apiKey))
+				{
+					byte[] plain = Encoding.UTF8.GetBytes(apiKey);
+					byte[] encrypted = ProtectedData.Protect(plain, null, DataProtectionScope.CurrentUser);
+					config.EncryptedOpenAIApiKeyBase64 = Convert.ToBase64String(encrypted);
+				}
+				else if (string.Equals(provider, "gemini", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(apiKey))
+				{
+					byte[] plain = Encoding.UTF8.GetBytes(apiKey);
+					byte[] encrypted = ProtectedData.Protect(plain, null, DataProtectionScope.CurrentUser);
+					config.EncryptedGeminiApiKeyBase64 = Convert.ToBase64String(encrypted);
+				}
+				else if (string.Equals(provider, "openrouter", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(apiKey))
+				{
+					byte[] plain = Encoding.UTF8.GetBytes(apiKey);
+					byte[] encrypted = ProtectedData.Protect(plain, null, DataProtectionScope.CurrentUser);
+					config.EncryptedOpenRouterApiKeyBase64 = Convert.ToBase64String(encrypted);
 				}
 
 				JsonSerializerOptions options = new JsonSerializerOptions
@@ -126,6 +246,7 @@ namespace TypeMate
 				return false;
 			}
 		}
+
 
 		public static async Task<string?> GetPreferredModelAsync()
 		{

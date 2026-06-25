@@ -67,21 +67,34 @@ namespace TypeMate
             await PromptForApiKeyAsync();
         }
 
-        private async Task<bool> EnsureApiKeyAsync()
-        {
-            string? provider = await ApiKeyStore.GetProviderAsync();
-            if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+		private async Task<bool> EnsureApiKeyAsync()
+		{
+			string? provider = await ApiKeyStore.GetProviderAsync();
+			if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
 
-            string? key = await ApiKeyStore.GetOpenAIApiKeyAsync();
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                return await PromptForApiKeyAsync();
-            }
-            return true;
-        }
+			string? key = null;
+			if (string.Equals(provider, "gemini", StringComparison.OrdinalIgnoreCase))
+			{
+				key = await ApiKeyStore.GetGeminiApiKeyAsync();
+			}
+			else if (string.Equals(provider, "openrouter", StringComparison.OrdinalIgnoreCase))
+			{
+				key = await ApiKeyStore.GetOpenRouterApiKeyAsync();
+			}
+			else
+			{
+				key = await ApiKeyStore.GetOpenAIApiKeyAsync();
+			}
+
+			if (string.IsNullOrWhiteSpace(key))
+			{
+				return await PromptForApiKeyAsync();
+			}
+			return true;
+		}
 
         private async Task<bool> PromptForApiKeyAsync()
         {
