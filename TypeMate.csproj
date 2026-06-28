@@ -7,11 +7,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>ChatGPT Image Sep 23, 2025, 12_12_28 PM (1).ico</ApplicationIcon>
+    <ApplicationIcon>typemate.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="ChatGPT Image Sep 23, 2025, 12_12_28 PM (1).ico">
+    <Content Include="typemate.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
