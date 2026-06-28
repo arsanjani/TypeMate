@@ -1,4 +1,5 @@
 using TypeMate.Core.AI;
+using TypeMate.Core.Notifications;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -124,7 +125,7 @@ namespace TypeMate
                 string source = TextEditor.Text ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(source))
                 {
-                    System.Windows.MessageBox.Show("No text to rewrite.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Information);
+                    NotificationService.Warning("No text selected to rewrite.");
                     return;
                 }
 
@@ -139,7 +140,7 @@ namespace TypeMate
                 string? rewritten = await RewriterInstance.RewriteAsync(source, style);
                 if (string.IsNullOrWhiteSpace(rewritten))
                 {
-                    System.Windows.MessageBox.Show("Failed to rewrite. Check your API key and network.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    NotificationService.Warning("Rewrite failed. Check your API key and network.");
                     return;
                 }
 
@@ -150,7 +151,7 @@ namespace TypeMate
             catch (Exception ex)
             {
                 Logger.LogError("AI rewrite error", ex);
-                System.Windows.MessageBox.Show("An error occurred while rewriting.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
+                NotificationService.Error("Rewrite failed. Check logs for details.");
             }
             finally
             {
@@ -179,8 +180,7 @@ namespace TypeMate
                 var clipboardCapture = new TypeMate.Core.Platform.ClipboardCapture();
                 if (!await clipboardCapture.SetClipboardText(textToInsert))
                 {
-                    System.Windows.MessageBox.Show("Failed to copy text to clipboard. Please try again.",
-                        "TypeMate Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    NotificationService.Error("Failed to copy text to clipboard.");
                     SetUiBusy(false);
                     return;
                 }

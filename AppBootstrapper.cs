@@ -2,6 +2,7 @@ using System.Windows;
 using WpfApplication = System.Windows.Application;
 using TypeMate.Core.AI;
 using TypeMate.Core.Config;
+using TypeMate.Core.Notifications;
 using TypeMate.Core.Platform;
 
 namespace TypeMate
@@ -73,13 +74,8 @@ namespace TypeMate
             if (assigned != primary.Name)
             {
                 Logger.LogInfo("Primary hotkey unavailable — assigned fallback: " + assigned);
-                app.Dispatcher.BeginInvoke((Action)(() => System.Windows.MessageBox.Show(
-                    "The default shortcut " + primary.Name + " is already in use by another application." + Environment.NewLine +
-                    "TypeMate has been assigned: " + assigned + Environment.NewLine + Environment.NewLine +
-                    "Please use this key combination instead.",
-                    "Shortcut Changed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information)));
+                NotificationService.Info(
+                    $"Default shortcut {primary.Name} is already in use. TypeMate assigned: {assigned}");
             }
             else
             {

@@ -35,6 +35,7 @@ namespace TypeMate
         protected override void OnExit(ExitEventArgs e)
         {
             Logger.LogInfo("TypeMate shutting down...");
+            Core.Notifications.NotificationService.HideAll();
             AppBootstrapper.Cleanup();
             base.OnExit(e);
         }

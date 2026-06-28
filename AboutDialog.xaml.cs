@@ -20,11 +20,14 @@ namespace TypeMate
             };
         }
 
-        private void GitHubLink_Click(object sender, RoutedEventArgs e)
+        private void GitHubLink_Click(object sender, RoutedEventArgs e) => OpenGitHub();
+
+        private void GitHubButton_Click(object sender, RoutedEventArgs e) => OpenGitHub();
+
+        private void OpenGitHub()
         {
             try
             {
-                // Try to open the GitHub URL in the default browser
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "https://github.com/arsanjani/TypeMate",

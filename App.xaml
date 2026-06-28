@@ -3,9 +3,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <!-- ==============================================
+             SEMANTIC ALIASES (AboutDialog, legacy)
+             ============================================== -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#6366F1"/>
+        <SolidColorBrush x:Key="GlassBrush">#FFFFFFF0</SolidColorBrush>
+        <SolidColorBrush x:Key="GlassBorderBrush">#E2E8F0</SolidColorBrush>
+        <SolidColorBrush x:Key="TitleBrush" Color="#0F172A"/>
+        <SolidColorBrush x:Key="SubtitleBrush" Color="#64748B"/>
+        <SolidColorBrush x:Key="CardBrush">#FFFFFFF8</SolidColorBrush>
+
+        <!-- ==============================================
              LIGHT THEME (Default)
              ============================================== -->
-        
+
         <!-- Primary Colors -->
         <SolidColorBrush x:Key="PrimaryMain" Color="#6366F1"/>
         <SolidColorBrush x:Key="PrimaryLight" Color="#818CF8"/>
