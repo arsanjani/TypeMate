@@ -12,7 +12,7 @@ namespace TypeMate
             InitializeComponent();
             Loaded += (s, e) =>
             {
-                var hk = hotkeyName ?? GlobalHotkey.RegisteredName ?? "Not set";
+                var hk = hotkeyName ?? AppBootstrapper.RegisteredHotkeyName ?? "Not set";
                 HotkeyTextBlock.Inlines.Clear();
                 HotkeyTextBlock.Inlines.Add(new Run(hk) { FontWeight = FontWeights.SemiBold });
                 HotkeyTextBlock.Inlines.Add(new Run("\r\n") { Foreground = (System.Windows.Media.Brush)FindResource("SubtitleBrush") });

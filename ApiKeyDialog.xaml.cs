@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,6 +21,8 @@ namespace TypeMate
 
 	public partial class ApiKeyDialog : Window
 	{
+		private static readonly Core.Config.IConfigStore ConfigStore = new Core.Config.JsonConfigStore();
+
 		public string? SavedKey { get; private set; }
 		public string? SavedModel { get; private set; }
 
@@ -65,8 +69,9 @@ namespace TypeMate
 			{
 				_isInitializing = true;
 
-				string? provider = await ApiKeyStore.GetProviderAsync();
-				string? currentModel = await ApiKeyStore.GetPreferredModelAsync();
+				Core.Config.AppConfig? config = await ConfigStore.GetAsync();
+				string? provider = config?.Provider ?? Providers.OpenAI;
+				string? currentModel = config?.PreferredModel;
 
 				// Select the saved provider in dropdown
 				if (!string.IsNullOrEmpty(provider))
@@ -95,7 +100,7 @@ namespace TypeMate
 				SyncUI();
 
 				// Load the appropriate existing key based on provider
-				string? existingKey = await GetExistingKeyForProvider(provider);
+				string? existingKey = GetExistingKeyForProvider(config, provider);
 				if (!string.IsNullOrEmpty(existingKey))
 				{
 					ApiKeyBox.Password = new string('\u2022', 50);
@@ -200,14 +205,15 @@ namespace TypeMate
 			};
 		}
 
-		private static async Task<string?> GetExistingKeyForProvider(string? provider)
+		private static string? GetExistingKeyForProvider(Core.Config.AppConfig? config, string? provider)
 		{
+			if (config == null)
+				return null;
 			if (string.Equals(provider, Providers.Gemini, StringComparison.OrdinalIgnoreCase))
-				return await ApiKeyStore.GetGeminiApiKeyAsync();
+				return Core.Config.AppConfig.DecryptBase64(config.EncryptedGeminiApiKeyBase64);
 			if (string.Equals(provider, Providers.OpenRouter, StringComparison.OrdinalIgnoreCase))
-				return await ApiKeyStore.GetOpenRouterApiKeyAsync();
-			// Default to OpenAI key
-			return await ApiKeyStore.GetOpenAIApiKeyAsync();
+				return Core.Config.AppConfig.DecryptBase64(config.EncryptedOpenRouterApiKeyBase64);
+			return Core.Config.AppConfig.DecryptBase64(config.EncryptedOpenAIApiKeyBase64);
 		}
 
 		private async void Save_Click(object sender, RoutedEventArgs e)
@@ -224,9 +230,12 @@ namespace TypeMate
 					return;
 				}
 
-				if (isOllama)
+				Core.Config.AppConfig config = await ConfigStore.GetAsync() ?? new Core.Config.AppConfig();				if (isOllama)
 				{
-					if (!await ApiKeyStore.SaveOllamaConfigAsync(model))
+					config.PreferredModel = model;
+					config.Provider = Providers.Ollama;
+
+					if (!await ConfigStore.SaveAsync(config))
 					{
 						System.Windows.MessageBox.Show("Failed to save configuration.", "TypeMate");
 						return;
@@ -241,7 +250,7 @@ namespace TypeMate
 				string key;
 				if (!_userEditedApiKey)
 				{
-					key = await GetExistingKeyForProvider(provider) ?? string.Empty;
+					key = GetExistingKeyForProvider(config, provider) ?? string.Empty;
 					if (string.IsNullOrEmpty(key))
 					{
 						string label = GetProviderKeyLabel(provider);
@@ -260,22 +269,26 @@ namespace TypeMate
 					}
 				}
 
-				// Save based on provider
-				bool saved = false;
+				config.PreferredModel = model;
+				config.Provider = provider;
+
 				if (provider == Providers.OpenAI)
 				{
-					saved = await ApiKeyStore.SaveOpenAIConfigAsync(key, model);
+					byte[] encrypted = Core.Config.AppConfig.Encrypt(key);
+					config.EncryptedOpenAIApiKeyBase64 = Convert.ToBase64String(encrypted);
 				}
 				else if (provider == Providers.Gemini)
 				{
-					saved = await ApiKeyStore.SaveGeminiConfigAsync(key, model, Providers.Gemini);
+					byte[] encrypted = Core.Config.AppConfig.Encrypt(key);
+					config.EncryptedGeminiApiKeyBase64 = Convert.ToBase64String(encrypted);
 				}
 				else if (provider == Providers.OpenRouter)
 				{
-					saved = await ApiKeyStore.SaveOpenRouterConfigAsync(key, model);
+					byte[] encrypted = Core.Config.AppConfig.Encrypt(key);
+					config.EncryptedOpenRouterApiKeyBase64 = Convert.ToBase64String(encrypted);
 				}
 
-				if (!saved)
+				if (!await ConfigStore.SaveAsync(config))
 				{
 					System.Windows.MessageBox.Show("Failed to save configuration.", "TypeMate");
 					return;

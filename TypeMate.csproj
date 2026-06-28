@@ -11,8 +11,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="ChatGPT Image Sep 23, 2025, 12_12_28 PM (1).ico" />
+    <Content Include="ChatGPT Image Sep 23, 2025, 12_12_28 PM (1).ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
-
 
 </Project>

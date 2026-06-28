@@ -1,4 +1,4 @@
-using System;
+using TypeMate.Core.AI;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,7 +11,14 @@ namespace TypeMate
     {
         private bool isRTL = false;
 
-        public PopupWindow(string selectedText, Window owner)
+		private static readonly Rewriter RewriterInstance = new Rewriter(
+			new Core.Config.JsonConfigStore(), 
+			new OpenAIProvider(), 
+			new GeminiProvider(), 
+			new OllamaProvider(), 
+			new OpenRouterProvider());
+
+		public PopupWindow(string selectedText, Window owner)
         {
             Owner = owner;
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -69,7 +76,10 @@ namespace TypeMate
 
 		private async Task<bool> EnsureApiKeyAsync()
 		{
-			string? provider = await ApiKeyStore.GetProviderAsync();
+			var configStore = new Core.Config.JsonConfigStore();
+			Core.Config.AppConfig? config = await configStore.GetAsync();
+
+			string? provider = config?.Provider ?? Providers.OpenAI;
 			if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
 			{
 				return true;
@@ -78,15 +88,15 @@ namespace TypeMate
 			string? key = null;
 			if (string.Equals(provider, "gemini", StringComparison.OrdinalIgnoreCase))
 			{
-				key = await ApiKeyStore.GetGeminiApiKeyAsync();
+				key = Core.Config.AppConfig.DecryptBase64(config?.EncryptedGeminiApiKeyBase64);
 			}
 			else if (string.Equals(provider, "openrouter", StringComparison.OrdinalIgnoreCase))
 			{
-				key = await ApiKeyStore.GetOpenRouterApiKeyAsync();
+				key = Core.Config.AppConfig.DecryptBase64(config?.EncryptedOpenRouterApiKeyBase64);
 			}
 			else
 			{
-				key = await ApiKeyStore.GetOpenAIApiKeyAsync();
+				key = Core.Config.AppConfig.DecryptBase64(config?.EncryptedOpenAIApiKeyBase64);
 			}
 
 			if (string.IsNullOrWhiteSpace(key))
@@ -126,7 +136,7 @@ namespace TypeMate
 
                 SetUiBusy(true);
 
-                string? rewritten = await OpenAIService.RewriteAsync(source, style);
+                string? rewritten = await RewriterInstance.RewriteAsync(source, style);
                 if (string.IsNullOrWhiteSpace(rewritten))
                 {
                     System.Windows.MessageBox.Show("Failed to rewrite. Check your API key and network.", "TypeMate", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -166,7 +176,8 @@ namespace TypeMate
                 SetUiBusy(true);
 
                 // Set clipboard BEFORE closing the window to avoid Application context issues
-                if (!await ClipboardManager.SetClipboardText(textToInsert))
+                var clipboardCapture = new TypeMate.Core.Platform.ClipboardCapture();
+                if (!await clipboardCapture.SetClipboardText(textToInsert))
                 {
                     System.Windows.MessageBox.Show("Failed to copy text to clipboard. Please try again.",
                         "TypeMate Error", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -179,7 +190,7 @@ namespace TypeMate
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(300);
-                    try { await ClipboardManager.SendCtrlV(); }
+                    try { await clipboardCapture.SendPasteAsync(); }
                     catch (Exception ex) { Logger.LogError("Paste failed", ex); }
                 });
         }
