@@ -121,7 +121,11 @@ namespace TypeMate.Core.Notifications
         private static void Remove(NotificationItem? item)
         {
             if (item is null || !_queue.Remove(item)) return;
-            if (_queue.Count == 0) _window?.Hide();
+            if (_queue.Count == 0)
+            {
+                _window?.Hide();
+                _window = null;
+            }
         }
 
         public static void HideAll()

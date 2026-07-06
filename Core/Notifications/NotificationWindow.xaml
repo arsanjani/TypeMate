@@ -19,9 +19,12 @@
 
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <Border x:Name="card" Background="#1E293BF0" CornerRadius="10" Margin="0,0,0,8" MaxWidth="360">
+                    <Border x:Name="card" Background="#1A1D2E" CornerRadius="12" Margin="0,0,0,8" MaxWidth="380">
+                        <Border.BorderBrush>
+                            <SolidColorBrush Color="#4A5568" Opacity="0.6"/>
+                        </Border.BorderBrush>
                         <Border.Effect>
-                            <DropShadowEffect Color="#0F172A" Opacity="0.10" BlurRadius="16" ShadowDepth="4"/>
+                            <DropShadowEffect Color="#000000" Opacity="0.50" BlurRadius="24" ShadowDepth="4"/>
                         </Border.Effect>
                         <Border.RenderTransform>
                             <TranslateTransform/>
@@ -61,16 +64,18 @@
 
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="{Binding Message}"
-                                           FontFamily="Segoe UI" FontSize="13"
-                                           Foreground="#F8FAFC" Margin="0,2,0,0"
-                                           TextWrapping="Wrap"/>
+                                           FontFamily="Segoe UI" FontSize="14.5"
+                                           FontWeight="SemiBold"
+                                           Foreground="#F7FAFC" Margin="0,3,0,0"
+                                           TextWrapping="Wrap"
+                                           LineHeight="22"/>
                             </StackPanel>
 
                             <Button Grid.Column="2" Content="&#xE711;"
-                                    FontFamily="Segoe MDL2 Assets" FontSize="12"
-                                    Height="28" Width="28" Padding="0"
+                                    FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                    Height="30" Width="30" Padding="0"
                                     VerticalAlignment="Top"
-                                    Background="Transparent" Foreground="#94A3B8"
+                                    Background="#4A5568" Foreground="#FFFFFF"
                                     BorderThickness="0" Cursor="Hand"
                                     Click="OnDismissClick">
                                 <Button.Style>

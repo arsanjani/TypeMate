@@ -151,7 +151,7 @@ namespace TypeMate
             catch (Exception ex)
             {
                 Logger.LogError("AI rewrite error", ex);
-                NotificationService.Error("Rewrite failed. Check logs for details.");
+                NotificationService.Error(ex.Message);
             }
             finally
             {

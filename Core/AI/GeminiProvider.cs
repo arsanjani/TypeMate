@@ -13,9 +13,12 @@ namespace TypeMate.Core.AI
 			Timeout = TimeSpan.FromSeconds(45)
 		};
 
-		public async Task<string?> RewriteAsync(string input, RewriteStyle style, string model, string? apiKey)
+		private const int DefaultMaxOutputTokens = 2048;
+
+		public async Task<string?> RewriteAsync(string input, RewriteStyle style, string model, string? apiKey, int contextLength = 131072)
 		{
-			if (string.IsNullOrWhiteSpace(apiKey)) return null;
+			if (string.IsNullOrWhiteSpace(apiKey))
+				throw new InvalidOperationException("API key is not configured.");
 
 			Http.DefaultRequestHeaders.Clear();
 			Http.DefaultRequestHeaders.Add("X-goog-api-key", apiKey);
@@ -30,7 +33,8 @@ namespace TypeMate.Core.AI
 				generationConfig = new
 				{
 					temperature = style == RewriteStyle.PromptOptimizer ? 0.3 : 0.7,
-					maxOutputTokens = (style == RewriteStyle.PromptOptimizer) ? 1500 : 1024
+					maxOutputTokens = Math.Min(contextLength > 0 ? contextLength : DefaultMaxOutputTokens,
+						style == RewriteStyle.PromptOptimizer ? 1500 : 1024)
 				}
 			};
 
@@ -40,8 +44,9 @@ namespace TypeMate.Core.AI
 			string respText = await resp.Content.ReadAsStringAsync();
 			if (!resp.IsSuccessStatusCode)
 			{
+				string msg = $"Gemini error ({(int)resp.StatusCode} {resp.ReasonPhrase}): {respText.Trim()}";
 				TypeMate.Logger.LogWarning($"Gemini error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
-				return null;
+				throw new InvalidOperationException(msg);
 			}
 
 			using JsonDocument doc = JsonDocument.Parse(respText);
@@ -54,7 +59,7 @@ namespace TypeMate.Core.AI
 					return parts[0].TryGetProperty("text", out JsonElement text) ? text.GetString() : null;
 				}
 			}
-			return null;
+			throw new InvalidOperationException("Gemini returned an unexpected response format.");
 		}
 	}
 }

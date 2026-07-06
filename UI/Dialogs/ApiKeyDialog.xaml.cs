@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,19 +8,11 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using TypeMate.Core.AI;
 
 namespace TypeMate
 {
-	// Provider identifiers that match config storage
-	static class Providers
-	{
-		public const string OpenAI = "openai";
-		public const string Gemini = "gemini";
-		public const string Ollama = "ollama";
-		public const string OpenRouter = "openrouter";
-	}
-
-	public partial class ApiKeyDialog : Window
+public partial class ApiKeyDialog : Window
 	{
 		private static readonly Core.Config.IConfigStore ConfigStore = new Core.Config.JsonConfigStore();
 
@@ -30,11 +23,10 @@ namespace TypeMate
 		{
 			InitializeComponent();
 
-			// Populate provider dropdown
-			ProviderComboBox.Items.Add("OpenAI");
 			ProviderComboBox.Items.Add("Gemini");
 			ProviderComboBox.Items.Add("Ollama");
 			ProviderComboBox.Items.Add("OpenRouter");
+			ProviderComboBox.Items.Add("OpenAI Compatible");
 
 			Loaded += ApiKeyDialog_Loaded;
 			ApiKeyBox.PasswordChanged += ApiKeyBox_PasswordChanged;
@@ -97,9 +89,16 @@ namespace TypeMate
 					ModelBox.Text = GetDefaultModel(provider ?? Providers.OpenAI);
 				}
 
-				SyncUI();
+			SyncUI();
 
-				// Load the appropriate existing key based on provider
+			// Restore OpenAI Compatible fields
+			BaseUrlBox.Text = config?.CompatibleBaseUrl ?? string.Empty;
+			CompatibleModelBox.Text = !string.IsNullOrWhiteSpace(config?.CompatibleModel)
+				? config.CompatibleModel
+				: (currentModel ?? string.Empty);
+			ContextWindowBox.Text = config?.CompatibleContextWindow?.ToString() ?? string.Empty;
+
+			// Load the appropriate existing key based on provider
 				string? existingKey = GetExistingKeyForProvider(config, provider);
 				if (!string.IsNullOrEmpty(existingKey))
 				{
@@ -120,25 +119,44 @@ namespace TypeMate
 		{
 			string provider = GetSelectedProvider();
 			bool isOllama = provider == Providers.Ollama;
+			bool isCompatible = provider == Providers.OpenAICompatible;
 
 			if (isOllama)
 			{
 				ApiKeyPanel.Visibility = Visibility.Collapsed;
 				ModelPanel.Visibility = Visibility.Visible;
+				BaseUrlPanel.Visibility = Visibility.Collapsed;
+				CompatibleModelPanel.Visibility = Visibility.Collapsed;
+				ContextWindowPanel.Visibility = Visibility.Collapsed;
 				OllamaBanner.Visibility = Visibility.Visible;
 				SecurityNotice.Visibility = Visibility.Collapsed;
 				HelperText.Text = "These models run locally via Ollama (localhost:11434). No API key required.";
 				ModelHelperText.Text = "Enter the Ollama model name (e.g., llama3.2, gemma:2b)";
 			}
+			else if (isCompatible)
+			{
+				ApiKeyPanel.Visibility = Visibility.Visible;
+				ModelPanel.Visibility = Visibility.Collapsed;
+				BaseUrlPanel.Visibility = Visibility.Visible;
+				CompatibleModelPanel.Visibility = Visibility.Visible;
+				ContextWindowPanel.Visibility = Visibility.Visible;
+				OllamaBanner.Visibility = Visibility.Collapsed;
+				SecurityNotice.Visibility = Visibility.Visible;
+				ApiKeyLabelText.Text = "🔑  API Key";
+				HelperText.Text = "Point TypeMate at any OpenAI-compatible chat completions endpoint.";
+			}
 			else
 			{
 				ApiKeyPanel.Visibility = Visibility.Visible;
 				ModelPanel.Visibility = Visibility.Visible;
+				BaseUrlPanel.Visibility = Visibility.Collapsed;
+				CompatibleModelPanel.Visibility = Visibility.Collapsed;
+				ContextWindowPanel.Visibility = Visibility.Collapsed;
 				OllamaBanner.Visibility = Visibility.Collapsed;
 				SecurityNotice.Visibility = Visibility.Visible;
 
 				string keyLabel = GetProviderKeyLabel(provider);
-				ApiKeyLabelText.Text = $"\u0001f510  {keyLabel} API Key";
+				ApiKeyLabelText.Text = $"🔑  {keyLabel} API Key";
 				HelperText.Text = "Configure your AI provider settings. Credentials are stored securely.";
 				ModelHelperText.Text = GetModelHelperText(provider);
 			}
@@ -156,18 +174,26 @@ namespace TypeMate
 
 		private static string GetProviderKey(string displayName)
 		{
-			return displayName.ToLowerInvariant();
+			return displayName switch
+			{
+				"OpenAI Compatible" => Providers.OpenAICompatible,
+				"OpenRouter" => Providers.OpenRouter,
+				"Gemini" => Providers.Gemini,
+				"Ollama" => Providers.Ollama,
+				_ => Providers.OpenAICompatible
+			};
 		}
 
 		private static string GetProviderDisplayName(string providerKey)
 		{
 			return providerKey switch
 			{
-				"openai" => "OpenAI",
+				"openai" => "OpenAI Compatible",
 				"gemini" => "Gemini",
 				"ollama" => "Ollama",
 				"openrouter" => "OpenRouter",
-				_ => "OpenAI"
+				"openaicompatible" => "OpenAI Compatible",
+				_ => "OpenAI Compatible"
 			};
 		}
 
@@ -175,10 +201,10 @@ namespace TypeMate
 		{
 			return provider switch
 			{
-				"openai" => "OpenAI",
 				"gemini" => "Gemini",
 				"openrouter" => "OpenRouter",
-				_ => "OpenAI"
+				"openaicompatible" => "OpenAI Compatible",
+				_ => "OpenAI Compatible"
 			};
 		}
 
@@ -186,10 +212,10 @@ namespace TypeMate
 		{
 			return provider switch
 			{
-				"openai" => "e.g., gpt-4o-mini, gpt-4o, o3-mini",
 				"gemini" => "e.g., gemini-2.0-flash, gemini-flash-latest",
 				"openrouter" => "e.g., openai/gpt-4o, anthropic/claude-sonnet-4-20250514",
-				_ => "Enter the model identifier for your provider"
+				"openaicompatible" => "Enter the model identifier for your endpoint",
+				_ => "e.g., gpt-4o-mini, gpt-4o, o3-mini"
 			};
 		}
 
@@ -201,6 +227,7 @@ namespace TypeMate
 				"gemini" => "gemini-flash-latest",
 				"ollama" => "llama3.2",
 				"openrouter" => "openai/gpt-4o",
+				"openaicompatible" => string.Empty,
 				_ => "gpt-4o-mini"
 			};
 		}
@@ -213,6 +240,8 @@ namespace TypeMate
 				return Core.Config.AppConfig.DecryptBase64(config.EncryptedGeminiApiKeyBase64);
 			if (string.Equals(provider, Providers.OpenRouter, StringComparison.OrdinalIgnoreCase))
 				return Core.Config.AppConfig.DecryptBase64(config.EncryptedOpenRouterApiKeyBase64);
+			if (string.Equals(provider, Providers.OpenAICompatible, StringComparison.OrdinalIgnoreCase))
+				return Core.Config.AppConfig.DecryptBase64(config.EncryptedOpenAICompatibleApiKeyBase64);
 			return Core.Config.AppConfig.DecryptBase64(config.EncryptedOpenAIApiKeyBase64);
 		}
 
@@ -222,11 +251,16 @@ namespace TypeMate
 			{
 				string provider = GetSelectedProvider();
 				bool isOllama = provider == Providers.Ollama;
-				string model = ModelBox.Text?.Trim() ?? string.Empty;
+				bool isCompatible = provider == Providers.OpenAICompatible;
 
-				if (string.IsNullOrWhiteSpace(model))
+				string model = isCompatible
+					? (CompatibleModelBox.Text?.Trim() ?? string.Empty)
+					: (ModelBox.Text?.Trim() ?? string.Empty);
+
+				if (string.IsNullOrWhiteSpace(model) && !isOllama)
 				{
-					System.Windows.MessageBox.Show("Please enter a model name.", "TypeMate");
+					System.Windows.MessageBox.Show(
+						isCompatible ? "Please enter a Model ID." : "Please enter a model name.", "TypeMate");
 					return;
 				}
 
@@ -244,6 +278,17 @@ namespace TypeMate
 					this.DialogResult = true;
 					this.Close();
 					return;
+				}
+
+				// OpenAI Compatible extra validation
+				if (isCompatible)
+				{
+					string baseUrl = BaseUrlBox.Text?.Trim() ?? string.Empty;
+					if (string.IsNullOrWhiteSpace(baseUrl) || !Uri.TryCreate(baseUrl, UriKind.Absolute, out _))
+					{
+						System.Windows.MessageBox.Show("Please enter a valid Base URL (e.g., https://api.openai.com).", "TypeMate");
+						return;
+					}
 				}
 
 				// Provider requires API key
@@ -272,20 +317,19 @@ namespace TypeMate
 				config.PreferredModel = model;
 				config.Provider = provider;
 
-				if (provider == Providers.OpenAI)
+			string ek = Convert.ToBase64String(Core.Config.AppConfig.Encrypt(key));
+			if (provider == Providers.Gemini) config.EncryptedGeminiApiKeyBase64 = ek;
+			else if (provider == Providers.OpenRouter) config.EncryptedOpenRouterApiKeyBase64 = ek;
+			else if (provider == Providers.OpenAICompatible) config.EncryptedOpenAICompatibleApiKeyBase64 = ek;
+			else config.EncryptedOpenAIApiKeyBase64 = ek;
+
+				if (isCompatible)
 				{
-					byte[] encrypted = Core.Config.AppConfig.Encrypt(key);
-					config.EncryptedOpenAIApiKeyBase64 = Convert.ToBase64String(encrypted);
-				}
-				else if (provider == Providers.Gemini)
-				{
-					byte[] encrypted = Core.Config.AppConfig.Encrypt(key);
-					config.EncryptedGeminiApiKeyBase64 = Convert.ToBase64String(encrypted);
-				}
-				else if (provider == Providers.OpenRouter)
-				{
-					byte[] encrypted = Core.Config.AppConfig.Encrypt(key);
-					config.EncryptedOpenRouterApiKeyBase64 = Convert.ToBase64String(encrypted);
+					config.CompatibleBaseUrl = BaseUrlBox.Text?.Trim();
+					config.CompatibleModel = model;
+					config.CompatibleContextWindow = int.TryParse(ContextWindowBox.Text?.Trim(), out int cw) && cw > 0
+						? cw
+						: (int?)null;
 				}
 
 				if (!await ConfigStore.SaveAsync(config))
@@ -366,6 +410,41 @@ namespace TypeMate
 			var color = System.Windows.Media.ColorConverter.ConvertFromString(hexColor);
 			ModelBoxBorder.BorderBrush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)color);
 			ModelBoxBorder.BorderThickness = new Thickness(thickness);
+		}
+
+		private static Border? GetParentBorder(Grid grid) => grid.Children.OfType<Border>().FirstOrDefault();
+
+		private void FieldBox_GotFocus(object sender, RoutedEventArgs e)
+		{
+			if (sender is System.Windows.Controls.TextBox tb && tb.Parent is Grid g && GetParentBorder(g) is Border b)
+				SetBorder(b, "#6366F1", 2);
+		}
+
+		private void FieldBox_LostFocus(object sender, RoutedEventArgs e)
+		{
+			if (sender is System.Windows.Controls.TextBox tb && tb.Parent is Grid g && GetParentBorder(g) is Border b)
+				SetBorder(b, "#E2E8F0", 1.5);
+		}
+
+		private void FieldBox_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+		{
+			if (sender is not System.Windows.Controls.TextBox tb || tb.IsKeyboardFocused) return;
+			if (tb.Parent is Grid gp && GetParentBorder(gp) is Border bp)
+				SetBorder(bp, "#94A3B8", 1.5);
+		}
+
+		private void FieldBox_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+		{
+			if (sender is not System.Windows.Controls.TextBox tb || tb.IsKeyboardFocused) return;
+			if (tb.Parent is Grid gp && GetParentBorder(gp) is Border bp)
+				SetBorder(bp, "#E2E8F0", 1.5);
+		}
+
+		private static void SetBorder(Border b, string hexColor, double thickness)
+		{
+			var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hexColor);
+			b.BorderBrush = new System.Windows.Media.SolidColorBrush(color);
+			b.BorderThickness = new Thickness(thickness);
 		}
 	}
 }

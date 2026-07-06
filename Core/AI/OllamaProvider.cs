@@ -15,14 +15,18 @@ namespace TypeMate.Core.AI
 
 		private const string Endpoint = "http://localhost:11434/v1/chat/completions";
 
-		public async Task<string?> RewriteAsync(string input, RewriteStyle style, string model, string? apiKey)
+		private const int DefaultMaxTokens = 4096;
+
+		public async Task<string?> RewriteAsync(string input, RewriteStyle style, string model, string? apiKey, int contextLength = 32768)
 		{
 			bool isSmallModel = model.Contains("0.8b", StringComparison.OrdinalIgnoreCase)
 							 || model.Contains("0.5b", StringComparison.OrdinalIgnoreCase)
 							 || model.Contains("1b", StringComparison.OrdinalIgnoreCase)
 							 || model.Contains("270m", StringComparison.OrdinalIgnoreCase);
 
-			int baseMaxTokens = isSmallModel ? 1024 : (style == RewriteStyle.PromptOptimizer ? 1500 : 512);
+			int defaultBase = isSmallModel ? 1024 : 2048;
+			int userContext = contextLength > 0 ? contextLength : DefaultMaxTokens;
+			int baseMaxTokens = Math.Min(defaultBase, userContext);
 
 			for (int attempt = 0; attempt < 2; attempt++)
 			{
@@ -52,8 +56,9 @@ namespace TypeMate.Core.AI
 
 					if (!resp.IsSuccessStatusCode)
 					{
+						string msg = $"Ollama error ({(int)resp.StatusCode} {resp.ReasonPhrase}): {respText.Trim()}";
 						TypeMate.Logger.LogWarning($"Ollama error ({model}): {(int)resp.StatusCode} {resp.ReasonPhrase} {respText}");
-						return null;
+						throw new InvalidOperationException(msg);
 					}
 
 					using JsonDocument doc = JsonDocument.Parse(respText);
@@ -69,15 +74,18 @@ namespace TypeMate.Core.AI
 						}
 					}
 				}
+				catch (InvalidOperationException)
+				{
+					throw;
+				}
 				catch (Exception ex)
 				{
 					TypeMate.Logger.LogError($"Ollama connection failed for model {model}", ex);
-					return null;
+					throw new InvalidOperationException($"Ollama connection failed: {ex.Message}");
 				}
 			}
 
-			TypeMate.Logger.LogWarning($"Ollama ({model}) consistently returned empty response");
-			return null;
+			throw new InvalidOperationException($"Ollama ({model}) consistently returned empty response.");
 		}
 	}
 }

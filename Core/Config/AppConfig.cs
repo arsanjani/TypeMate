@@ -8,8 +8,14 @@ namespace TypeMate.Core.Config
         public string? EncryptedOpenAIApiKeyBase64 { get; set; }
         public string? EncryptedGeminiApiKeyBase64 { get; set; }
         public string? EncryptedOpenRouterApiKeyBase64 { get; set; }
+        public string? EncryptedOpenAICompatibleApiKeyBase64 { get; set; }
         public string? PreferredModel { get; set; }
-        public string? Provider { get; set; } // "openai", "gemini", "ollama", or "openrouter"
+        public string? Provider { get; set; } // "openai", "gemini", "ollama", "openrouter", or "openaicompatible"
+
+        // OpenAI Compatible provider settings
+        public string? CompatibleBaseUrl { get; set; }
+        public string? CompatibleModel { get; set; }
+        public int? CompatibleContextWindow { get; set; }
 
         public static byte[] Encrypt(string plainText)
         {
