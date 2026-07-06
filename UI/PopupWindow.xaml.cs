@@ -1,8 +1,9 @@
 using TypeMate.Core.AI;
+using TypeMate.Core.Config;
+using TypeMate.Core.DI;
 using TypeMate.Core.Notifications;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
@@ -10,16 +11,12 @@ namespace TypeMate
 {
     public partial class PopupWindow : Window
     {
+        private static Rewriter Rewriter => ServiceContainer.Instance.Rewriter;
+        private static Core.Platform.IClipboardCapture Clipboard => ServiceContainer.Instance.Clipboard;
+
         private bool isRTL = false;
 
-		private static readonly Rewriter RewriterInstance = new Rewriter(
-			new Core.Config.JsonConfigStore(), 
-			new OpenAIProvider(), 
-			new GeminiProvider(), 
-			new OllamaProvider(), 
-			new OpenRouterProvider());
-
-		public PopupWindow(string selectedText, Window owner)
+        public PopupWindow(string selectedText, Window owner)
         {
             Owner = owner;
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -75,37 +72,23 @@ namespace TypeMate
             await PromptForApiKeyAsync();
         }
 
-		private async Task<bool> EnsureApiKeyAsync()
-		{
-			var configStore = new Core.Config.JsonConfigStore();
-			Core.Config.AppConfig? config = await configStore.GetAsync();
+        private async Task<bool> EnsureApiKeyAsync()
+        {
+            var configStore = new JsonConfigStore();
+            var config = await configStore.GetAsync();
+            if (config?.Provider == "ollama") return true;
 
-			string? provider = config?.Provider ?? Providers.OpenAI;
-			if (string.Equals(provider, "ollama", StringComparison.OrdinalIgnoreCase))
-			{
-				return true;
-			}
+            string? key = config?.EncryptedOpenAIApiKeyBase64 is { Length: > 0 }
+                ? AppConfig.DecryptBase64(config.EncryptedOpenAIApiKeyBase64)
+                : config?.EncryptedGeminiApiKeyBase64 is { Length: > 0 }
+                    ? AppConfig.DecryptBase64(config.EncryptedGeminiApiKeyBase64)
+                    : config?.EncryptedOpenRouterApiKeyBase64 is { Length: > 0 }
+                        ? AppConfig.DecryptBase64(config.EncryptedOpenRouterApiKeyBase64)
+                        : null;
+            if (!string.IsNullOrWhiteSpace(key)) return true;
 
-			string? key = null;
-			if (string.Equals(provider, "gemini", StringComparison.OrdinalIgnoreCase))
-			{
-				key = Core.Config.AppConfig.DecryptBase64(config?.EncryptedGeminiApiKeyBase64);
-			}
-			else if (string.Equals(provider, "openrouter", StringComparison.OrdinalIgnoreCase))
-			{
-				key = Core.Config.AppConfig.DecryptBase64(config?.EncryptedOpenRouterApiKeyBase64);
-			}
-			else
-			{
-				key = Core.Config.AppConfig.DecryptBase64(config?.EncryptedOpenAIApiKeyBase64);
-			}
-
-			if (string.IsNullOrWhiteSpace(key))
-			{
-				return await PromptForApiKeyAsync();
-			}
-			return true;
-		}
+            return await PromptForApiKeyAsync();
+        }
 
         private async Task<bool> PromptForApiKeyAsync()
         {
@@ -137,7 +120,7 @@ namespace TypeMate
 
                 SetUiBusy(true);
 
-                string? rewritten = await RewriterInstance.RewriteAsync(source, style);
+                string? rewritten = await Rewriter.RewriteAsync(source, style);
                 if (string.IsNullOrWhiteSpace(rewritten))
                 {
                     NotificationService.Warning("Rewrite failed. Check your API key and network.");
@@ -177,8 +160,7 @@ namespace TypeMate
                 SetUiBusy(true);
 
                 // Set clipboard BEFORE closing the window to avoid Application context issues
-                var clipboardCapture = new TypeMate.Core.Platform.ClipboardCapture();
-                if (!await clipboardCapture.SetClipboardText(textToInsert))
+                if (!await Clipboard.SetClipboardText(textToInsert))
                 {
                     NotificationService.Error("Failed to copy text to clipboard.");
                     SetUiBusy(false);
@@ -190,7 +172,7 @@ namespace TypeMate
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(300);
-                    try { await clipboardCapture.SendPasteAsync(); }
+                    try { await Clipboard.SendPasteAsync(); }
                     catch (Exception ex) { Logger.LogError("Paste failed", ex); }
                 });
         }

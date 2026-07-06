@@ -1,120 +1,99 @@
 using System.Windows;
-using WpfApplication = System.Windows.Application;
-using TypeMate.Core.AI;
-using TypeMate.Core.Config;
+using TypeMate.Core.DI;
 using TypeMate.Core.Notifications;
 using TypeMate.Core.Platform;
+using WpfApp = System.Windows.Application;
 
 namespace TypeMate
 {
     public static class AppBootstrapper
     {
-        private static IClipboardCapture? _clipboardCapture;
-        private static IHotkeyManager? _hotkeyManager;
-        private static Services.TrayService? _trayService;
-        private static Rewriter? _rewriter;
+        private static readonly ServiceContainer DI = ServiceContainer.Instance;
         private static Window? _mainWindow;
 
         public static string? RegisteredHotkeyName { get; private set; }
 
-        public static void Run(WpfApplication app)
+        public static void Run(WpfApp app)
         {
-            SetupMainWindow(app);
-            SetupPlatformServices();
-            bool hotkeyOk = RegisterHotkey(app);
-            if (!hotkeyOk) Shutdown();
+            _mainWindow = SetupMainWindow(app);
+            if (!RegisterHotkey()) Shutdown();
         }
 
-        private static void SetupMainWindow(WpfApplication app)
+        private static Window SetupMainWindow(WpfApp app)
         {
-            _mainWindow = app.MainWindow ?? new MainWindow();
-            _mainWindow.WindowState = WindowState.Minimized;
-            _mainWindow.ShowInTaskbar = false;
-            _mainWindow.Visibility = Visibility.Hidden;
+            var window = app.MainWindow ?? new MainWindow();
+            window.WindowState = WindowState.Minimized;
+            window.ShowInTaskbar = false;
+            window.Visibility = Visibility.Hidden;
+            return window;
         }
 
-        private static void SetupPlatformServices()
+        private static bool RegisterHotkey()
         {
-            _clipboardCapture = new ClipboardCapture();
-            var configStore = new JsonConfigStore();
-            _rewriter = new Rewriter(configStore,
-                new OpenAIProvider(), new GeminiProvider(),
-                new OllamaProvider(), new OpenRouterProvider());
-        }
+            var primary = new Hotcode(0x0003, 0x52, "Ctrl+Alt+R");
+            var ordered = CreateHotkeyArray(primary);
 
-        private static bool RegisterHotkey(WpfApplication app)
-        {
-            Hotcode primary = new(0x0003, 0x52, "Ctrl+Alt+R");
-            Hotcode[] fallbacks = new[]
-            {
-                new Hotcode(0x0003, 0x54, "Ctrl+Alt+T"),
-                new Hotcode(0x0003, 0x59, "Ctrl+Alt+Y"),
-                new Hotcode(0x0003, 0x49, "Ctrl+Alt+I"),
-            };
-
-            // Build ordered list: primary first, then all fallbacks in priority order
-            Hotcode[] ordered = new Hotcode[1 + (fallbacks?.Length ?? 0)];
-            ordered[0] = primary;
-            for (int i = 0; i < (fallbacks?.Length ?? 0)!; i++)
-                ordered[i + 1] = fallbacks![i];
-
-            _hotkeyManager = new HotkeyManager();
-            _hotkeyManager.HotkeyPressed += (s, e) => OnHotkeyPressed();
-            bool success = _hotkeyManager.Register(_mainWindow!, ordered);
-
-            if (!success)
+            DI.Hotkey = new HotkeyManager();
+            DI.Hotkey.HotkeyPressed += (_, _) => OnHotkeyPressed();
+            if (!DI.Hotkey.Register(_mainWindow!, ordered))
             {
                 Logger.LogWarning("All hot keys conflicted — TypeMate will not respond to shortcuts until restarted");
                 return false;
             }
 
-            string assigned = _hotkeyManager.RegisteredShortcut ?? "None";
+            string assigned = DI.Hotkey.RegisteredShortcut ?? "None";
             RegisteredHotkeyName = assigned;
 
             if (assigned != primary.Name)
             {
-                Logger.LogInfo("Primary hotkey unavailable — assigned fallback: " + assigned);
-                NotificationService.Info(
-                    $"Default shortcut {primary.Name} is already in use. TypeMate assigned: {assigned}");
+                Logger.LogInfo($"Primary hotkey unavailable — assigned fallback: {assigned}");
+                NotificationService.Info($"Default shortcut {primary.Name} is already in use. TypeMate assigned: {assigned}");
             }
             else
             {
                 Logger.LogInfo("Global hotkey registered successfully: " + assigned);
             }
 
-            _trayService = new Services.TrayService(_clipboardCapture!, WpfApplication.Current.MainWindow ?? _mainWindow!);
-            _trayService.ExitRequested += (s, e) => Shutdown();
+            DI.Tray = new Services.TrayService(DI.Clipboard, WpfApp.Current.MainWindow ?? _mainWindow!);
+            DI.Tray.ExitRequested += (_, _) => Shutdown();
             return true;
+        }
+
+        private static Hotcode[] CreateHotkeyArray(Hotcode primary)
+        {
+            var fallbacks = new[]
+            {
+                new Hotcode(0x0003, 0x54, "Ctrl+Alt+T"),
+                new Hotcode(0x0003, 0x59, "Ctrl+Alt+Y"),
+                new Hotcode(0x0003, 0x49, "Ctrl+Alt+I"),
+            };
+
+            var ordered = new Hotcode[1 + fallbacks.Length];
+            ordered[0] = primary;
+            for (int i = 0; i < fallbacks.Length; i++) ordered[i + 1] = fallbacks[i];
+            return ordered;
         }
 
         private static void OnHotkeyPressed()
         {
-            var cb = _clipboardCapture;
-            var rw = _rewriter;
+            var cb = DI.Clipboard;
             var mw = _mainWindow;
-            if (cb is null || rw is null) return;
+            if (cb is null) return;
 
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    string? capturedText = await cb.CaptureAsync();
-                    if (!string.IsNullOrWhiteSpace(capturedText) && rw is not null)
-                    {
-                        await WpfApplication.Current.Dispatcher.InvokeAsync(
-                            () => new PopupWindow(capturedText, mw!).Show());
-                    }
+                    string? text = await cb.CaptureAsync();
+                    if (!string.IsNullOrWhiteSpace(text))
+                        await WpfApp.Current.Dispatcher.InvokeAsync(() => new PopupWindow(text, mw!).Show());
                 }
                 catch (Exception ex) { Logger.LogError("Error handling hotkey press", ex); }
             });
         }
 
-        public static void Shutdown() => WpfApplication.Current.Shutdown();
+        public static void Shutdown() => WpfApp.Current.Shutdown();
 
-        public static void Cleanup()
-        {
-            _hotkeyManager?.Dispose();
-            _trayService?.Dispose();
-        }
+        public static void Cleanup() => ServiceContainer.Instance.Dispose();
     }
 }
