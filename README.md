@@ -6,7 +6,7 @@
 
 > Select any text anywhere on Windows → press **Ctrl+Alt+R** → rewrite with AI → paste back. That's it.
 
-TypeMate is a lightweight **Windows tray application** that lets you capture selected text, rewrite it using multiple AI providers (OpenAI, Google Gemini, OpenRouter, Ollama), and insert the result back into any application. Built with **.NET 8**, **WPF**, and **WinForms**.
+TypeMate is a lightweight **Windows tray application** that lets you capture selected text, rewrite it using multiple AI providers (OpenAI, Google Gemini, OpenRouter, Ollama, or any OpenAI-compatible endpoint), and insert the result back into any application. Built with **.NET 8**, **WPF**, and **WinForms**.
 
 [Features](#features) • [Quick Start](#quick-start) • [AI Providers](#ai-providers) • [Rewrite Styles](#rewrite-styles) • [Hotkeys](#hotkeys) • [Architecture](#architecture) • [Troubleshooting](#troubleshooting)
 
@@ -14,12 +14,13 @@ TypeMate is a lightweight **Windows tray application** that lets you capture sel
 
 ## ✨ Features
 
-- **Multi-Provider AI** — Choose from OpenAI, Google Gemini, OpenRouter, or local Ollama models
+- **Multi-Provider AI** — Choose from OpenAI, Google Gemini, OpenRouter, local Ollama, or any OpenAI-compatible endpoint (LM Studio, vLLM, custom servers)
 - **Global Hotkey** — One keystroke (`Ctrl+Alt+R`) captures selected text from any application
 - **Smart Rewriting** — 10 rewrite styles including translation (English ↔ Farsi), prompt engineering, social posts
 - **RTL Support** — Toggle right-to-left text direction for Farsi/Persian content
+- **Toast Notifications** — Auto-dismissing notifications for hotkey fallbacks and status updates
 - **System Tray** — Runs quietly in the background with minimal resource usage
-- **Secure API Keys** — Keys encrypted with Windows DPAPI (user-scoped, machine-bound)
+- **Secure API Keys** — Keys encrypted with Windows DPAPI (user-scoped, machine-bound), supports per-provider key storage
 - **Auto-Focus** — Inserts rewritten text back into the original application window
 - **Robust Error Handling** — Built for long-term background operation without crashes
 
@@ -58,8 +59,9 @@ Output: `bin/Release/net8.0-windows/publish/TypeMate.exe`
 
 1. TypeMate starts as a **tray icon** (no main window)
 2. Right-click the tray icon → **Set API Key** to configure your AI provider
-3. Choose a provider (OpenAI, Gemini, OpenRouter, or Ollama) and enter credentials
-4. Select any text in any application and press **Ctrl+Alt+R**
+3. Choose a provider (OpenAI, Gemini, OpenRouter, Ollama, or OpenAI Compatible) and enter credentials
+4. For OpenAI Compatible providers, you can also set a custom base URL, model name, and context window size
+5. Select any text in any application and press **Ctrl+Alt+R**
 
 ---
 
@@ -68,9 +70,10 @@ Output: `bin/Release/net8.0-windows/publish/TypeMate.exe`
 | Provider | Models | API Key Required | Notes |
 |----------|--------|-----------------|-------|
 | **OpenAI** | `o4-mini`, `gpt-4o-mini` | ✅ Yes | Default provider with automatic fallback |
-| **Google Gemini** | `gemini-flash-latest` | ✅ Yes | Fast, cost-effective rewrites |
+| **Google Gemini** | `gemini-flash-latest` | ✅ Yes | Fast, cost-effective rewrites (128K context) |
 | **OpenRouter** | Any OpenRouter-supported model | ✅ Yes | Access to 100+ models through one API |
 | **Ollama** | `nemotron`, `gemma`, `qwen`, `translategemma`, etc. | ❌ No | Fully local, runs on `localhost:11434` |
+| **OpenAI Compatible** | Any model on a compatible endpoint | ✅ Yes | Connect to any OpenAI-compatible API (LM Studio, vLLM, custom servers) |
 
 ### Switching Providers
 
@@ -104,7 +107,7 @@ Access styles by clicking the **AI Tools** button in the popup or via the contex
 | `Ctrl + Alt + R` | Capture selected text and open editor popup |
 | `Escape` | Close popup without changes |
 
-If `Ctrl+Alt+R` is already in use, TypeMate automatically falls back to `Ctrl+Shift+R`, then `Alt+Shift+R`. The currently registered hotkey is shown in the **About** dialog (right-click tray icon → About).
+If `Ctrl+Alt+R` is already in use, TypeMate automatically falls back through a chain: `Ctrl+Alt+T` → `Ctrl+Alt+Y` → `Ctrl+Alt+I`. A toast notification appears if a fallback shortcut is assigned. The currently registered hotkey is shown in the **About** dialog (right-click tray icon → About).
 
 ---
 
@@ -112,25 +115,54 @@ If `Ctrl+Alt+R` is already in use, TypeMate automatically falls back to `Ctrl+Sh
 
 ```
 TypeMate/
-├── App.xaml.cs           # Entry point — wires TrayManager + GlobalHotkey
-├── MainWindow.xaml.cs    # Hidden host window (provides HwndSource for hotkey registration)
-├── PopupWindow.xaml.cs   # Floating editor popup — AI rewrite + insert simulation
-├── TrayManager.cs        # NotifyIcon (WinForms) + context menu
-├── GlobalHotkey.cs       # P/Invoke RegisterHotKey with fallback logic
-├── ClipboardManager.cs   # keybd_event for Ctrl+C/Ctrl+V, window target tracking
-├── OpenAIService.cs      # Multi-provider AI calls (OpenAI, Gemini, OpenRouter, Ollama)
-├── ApiKeyStore.cs        # DPAPI-encrypted config persistence
-├── ApiKeyDialog.xaml.cs  # Provider selection + model configuration UI
-└── Logger.cs             # Append-only rotating log (~1 MB cap)
+├── App.xaml.cs               # Entry point — delegates to AppBootstrapper
+├── AppBootstrapper.cs        # Wires DI, hotkey registration, tray service, and shutdown
+├── Core/                     # Core logic and abstractions
+│   ├── AI/                   # Multi-provider AI rewriting
+│   │   ├── IAIProvider.cs          # Provider interface
+│   │   ├── Rewriter.cs             # Provider resolution + rewrite orchestration
+│   │   ├── RewriteStyle.cs         # Styles + PromptBuilder
+│   │   ├── OpenAICompatibleProvider.cs  # Base for OpenAI-compatible APIs
+│   │   ├── GeminiProvider.cs       # Google Gemini
+│   │   ├── OllamaProvider.cs       # Local Ollama
+│   │   └── OpenRouterProvider.cs   # OpenRouter gateway
+│   ├── Config/               # Configuration persistence
+│   │   ├── AppConfig.cs              # Config model with DPAPI encrypt/decrypt
+│   │   ├── IConfigStore.cs           # Store interface
+│   │   └── JsonConfigStore.cs        # JSON file-backed store
+│   ├── DI/                   # Lightweight dependency injection
+│   │   └── ServiceContainer.cs       # Singleton container for all services
+│   ├── Notifications/        # Toast-style notification system
+│   │   ├── NotificationWindow.xaml
+│   │   └── NotificationWindow.xaml.cs
+│   ├── Platform/             # OS-level abstractions
+│   │   ├── IClipboardCapture.cs      # Clipboard capture interface
+│   │   ├── ClipboardCapture.cs       # keybd_event-based implementation
+│   │   ├── IHotkeyManager.cs         # Global hotkey interface
+│   │   ├── HotkeyManager.cs          # RegisterHotKey P/Invoke implementation
+│   │   ├── Hotcode.cs                # Hotkey shortcut definition
+│   │   └── NativeMethods.cs          # Win32 P/Invoke helpers
+│   └── Logger.cs             # Append-only rotating log (~1 MB cap)
+├── Services/                 # Cross-cutting services
+│   └── TrayService.cs        # NotifyIcon (WinForms) + context menu
+└── UI/                       # Presentation layer
+    ├── MainWindow.xaml/.cs           # Hidden host window (HwndSource for hotkeys)
+    ├── PopupWindow.xaml/.cs          # Floating editor popup — AI rewrite + insert
+    ├── PopupWindowExtensions.cs      # ShowAndWaitAsync helper
+    └── Dialogs/                      # Modal dialogs
+        ├── AboutDialog.xaml/.cs
+        └── ApiKeyDialog.xaml/.cs     # Provider selection + model config UI
 ```
 
 ### Key Design Decisions
 
-- **Single-project solution** — no unnecessary layering or abstraction
-- **Flat file structure** — all source files at root, no `src/` subfolder
-- **DPAPI encryption** — API keys stored via `ProtectedData`, user-scoped and machine-bound
-- **Clipboard simulation** — uses `keybd_event` P/Invoke for reliable cross-application text capture and insertion
-- **Owner-aware popup** — PopupWindow centers on the owning window for consistent positioning
+- **Layered architecture** — `Core/` for business logic, `Services/` for cross-cutting concerns, `UI/` for presentation
+- **Interface-driven platform layer** — `IClipboardCapture` and `IHotkeyManager` abstract OS-level operations behind testable contracts
+- **Simple DI container** — `ServiceContainer` provides singleton services without a heavy framework
+- **Strategy pattern for AI providers** — `IAIProvider` interface with `Rewriter` orchestrating provider resolution and model selection
+- **OpenAI-compatible abstraction** — `OpenAICompatibleProvider` serves as base class for any OpenAI-compatible API (including custom endpoints)
+- **Bootstrapper pattern** — `AppBootstrapper` centralizes startup wiring, hotkey registration with fallback chain, and shutdown coordination
+- **Toast notifications** — `NotificationWindow` provides auto-dismissing info/warning/error toasts with progress animation
 
 ---
 
@@ -138,7 +170,7 @@ TypeMate/
 
 ### Hotkey not working
 
-TypeMate registers `Ctrl+Alt+R` at startup. If another application holds this hotkey, TypeMate falls back automatically. Check the active hotkey in the **About** dialog.
+TypeMate registers `Ctrl+Alt+R` at startup. If another application holds this hotkey, TypeMate falls back automatically through `Ctrl+Alt+T` → `Ctrl+Alt+Y` → `Ctrl+Alt+I`. A toast notification appears when a fallback is used. Check the active hotkey in the **About** dialog.
 
 ### "Failed to rewrite" error
 
@@ -160,7 +192,7 @@ Keys are encrypted with Windows DPAPI and are **user-scoped + machine-bound**. Y
 
 - **Windows only** — relies on Win32 P/Invoke for hotkeys, tray icon, and keyboard simulation
 - **Plain text** — no rich text or formatting preservation
-- **Fixed hotkey options** — chooses from `Ctrl+Alt+R` → `Ctrl+Shift+R` → `Alt+Shift+R` fallback chain
+- **Fixed hotkey options** — chooses from `Ctrl+Alt+R` → `Ctrl+Alt+T` → `Ctrl+Alt+Y` → `Ctrl+Alt+I` fallback chain
 
 ---
 
