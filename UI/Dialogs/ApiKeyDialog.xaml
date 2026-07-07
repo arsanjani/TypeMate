@@ -341,7 +341,7 @@
 
                     <!-- OpenAI Compatible: Context Window -->
                     <StackPanel x:Name="ContextWindowPanel" Margin="0,0,0,16" Visibility="Collapsed">
-                        <TextBlock Text="🪟  Context Window Size" Style="{StaticResource InputLabel}"/>
+                        <TextBlock Text="📏  Context Window Size" Style="{StaticResource InputLabel}"/>
                         <Grid MouseEnter="FieldBox_MouseEnter" MouseLeave="FieldBox_MouseLeave">
                             <Border x:Name="ContextWindowBoxBorder"
                                     Height="48"
